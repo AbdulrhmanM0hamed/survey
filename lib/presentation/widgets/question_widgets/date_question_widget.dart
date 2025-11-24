@@ -76,12 +76,15 @@ class _DateQuestionWidgetState extends State<DateQuestionWidget> {
               ),
             ),
             if (widget.isRequired)
-              const Text(
-                '*',
-                style: TextStyle(
-                  color: Colors.red,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Container(
+                width: 12,
+                height: 12,
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _selectedDate != null 
+                      ? Colors.green 
+                      : Colors.red,
                 ),
               ),
           ],

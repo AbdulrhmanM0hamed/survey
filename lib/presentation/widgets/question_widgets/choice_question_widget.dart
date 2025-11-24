@@ -49,12 +49,15 @@ class _ChoiceQuestionWidgetState extends State<ChoiceQuestionWidget> {
               ),
             ),
             if (widget.isRequired)
-              const Text(
-                '*',
-                style: TextStyle(
-                  color: Colors.red,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Container(
+                width: 12,
+                height: 12,
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _hasValue() 
+                      ? Colors.green 
+                      : Colors.red,
                 ),
               ),
           ],
@@ -65,6 +68,14 @@ class _ChoiceQuestionWidgetState extends State<ChoiceQuestionWidget> {
         }),
       ],
     );
+  }
+
+  bool _hasValue() {
+    if (widget.isMultiChoice) {
+      return (_selectedValue as List).isNotEmpty;
+    } else {
+      return _selectedValue != null;
+    }
   }
 
   Widget _buildChoiceItem(ChoiceModel choice) {

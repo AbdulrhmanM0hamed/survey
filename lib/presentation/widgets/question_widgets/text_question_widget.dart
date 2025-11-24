@@ -23,12 +23,26 @@ class TextQuestionWidget extends StatefulWidget {
 
 class _TextQuestionWidgetState extends State<TextQuestionWidget> {
   late TextEditingController _controller;
+  late FocusNode _focusNode;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialValue);
+    _focusNode = FocusNode();
+    
+    // Listen to focus changes for auto-save
+    _focusNode.addListener(_onFocusChange);
+    
     print('📋 TextQuestionWidget initState: initialValue="${widget.initialValue}"');
+  }
+  
+  void _onFocusChange() {
+    if (!_focusNode.hasFocus && _controller.text.isNotEmpty) {
+      // Auto-save when user leaves the field
+      print('🔄 Auto-saving on unfocus: value="${_controller.text}"');
+      widget.onChanged(_controller.text);
+    }
   }
 
   @override
@@ -43,6 +57,8 @@ class _TextQuestionWidgetState extends State<TextQuestionWidget> {
 
   @override
   void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _focusNode.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -64,12 +80,15 @@ class _TextQuestionWidgetState extends State<TextQuestionWidget> {
               ),
             ),
             if (widget.isRequired)
-              const Text(
-                '*',
-                style: TextStyle(
-                  color: Colors.red,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Container(
+                width: 12,
+                height: 12,
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _controller.text.isNotEmpty 
+                      ? Colors.green 
+                      : Colors.red,
                 ),
               ),
           ],
@@ -77,6 +96,7 @@ class _TextQuestionWidgetState extends State<TextQuestionWidget> {
         const SizedBox(height: 12),
         TextField(
           controller: _controller,
+          focusNode: _focusNode,
           keyboardType: _getKeyboardType(),
           inputFormatters: _getInputFormatters(),
           maxLines: widget.question.questionType == QuestionType.text ? 3 : 1,
@@ -101,26 +121,13 @@ class _TextQuestionWidgetState extends State<TextQuestionWidget> {
               horizontal: 16,
               vertical: 12,
             ),
-            suffixIcon: _controller.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.check_circle, color: Colors.green),
-                    onPressed: () {
-                      // Close keyboard and trigger save
-                      print('✓ Check button pressed: value="${_controller.text}"');
-                      FocusScope.of(context).unfocus();
-                      widget.onChanged(_controller.text);
-                    },
-                  )
-                : null,
+            // Remove check icon - auto-save on unfocus now
+            suffixIcon: null,
           ),
           onChanged: (value) {
-            // Update UI to show/hide check button (only for suffix icon)
+            // Update UI for required indicator (red/green circle)
             if (mounted) {
               setState(() {});
-            }
-            // For text type, save while typing
-            if (widget.question.questionType == QuestionType.text) {
-              widget.onChanged(value);
             }
           },
           onSubmitted: (value) {
