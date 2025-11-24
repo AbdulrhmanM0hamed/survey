@@ -1,0 +1,60 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:provider/provider.dart';
+import 'package:survey/core/di/injection.dart';
+import 'package:survey/core/storage/hive_service.dart';
+import 'package:survey/presentation/screens/surveys_list/surveys_list_screen.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Hive for local storage
+  await HiveService.init();
+
+  // Initialize dependency injection
+  Injection.init();
+
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => Injection.surveysListViewModel,
+        ),
+        ChangeNotifierProvider(
+          create: (_) => Injection.surveyDetailsViewModel,
+        ),
+      ],
+      child: MaterialApp(
+        title: 'تطبيق الاستبيانات',
+        debugShowCheckedModeBanner: false,
+        locale: const Locale('ar'),
+        supportedLocales: const [
+          Locale('ar'),
+          Locale('en'),
+        ],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+          useMaterial3: true,
+          fontFamily: 'Arial',
+          textTheme: const TextTheme(
+            bodyLarge: TextStyle(fontSize: 16),
+            bodyMedium: TextStyle(fontSize: 14),
+          ),
+        ),
+        home: const SurveysListScreen(),
+      ),
+    );
+  }
+}
