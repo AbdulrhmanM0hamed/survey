@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:survey/presentation/screens/survey_details/survey_details_screen.dart';
+import 'package:survey/presentation/screens/pre_survey_info/pre_survey_info_screen.dart';
 import 'package:survey/presentation/screens/surveys_list/viewmodel/surveys_list_viewmodel.dart';
 import 'package:survey/presentation/widgets/survey_card.dart';
 
@@ -175,8 +175,9 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => SurveyDetailsScreen(
+                              builder: (context) => PreSurveyInfoScreen(
                                 surveyId: survey.id,
+                                surveyCode: survey.code,
                               ),
                             ),
                           );

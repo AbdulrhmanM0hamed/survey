@@ -511,6 +511,13 @@ class ExcelExportService {
     structure.add({'type': 'basic', 'text': 'رقم الاستجابة'});
     structure.add({'type': 'basic', 'text': 'كود الاستبيان'});
     structure.add({'type': 'basic', 'text': 'اسم الاستبيان'});
+    structure.add({'type': 'basic', 'text': 'اسم الباحث'});
+    structure.add({'type': 'basic', 'text': 'اسم المشرف'});
+    structure.add({'type': 'basic', 'text': 'اسم المدينة'});
+    structure.add({'type': 'basic', 'text': 'اسم الحى / القرية'});
+    structure.add({'type': 'basic', 'text': 'اسم الشارع'});
+    structure.add({'type': 'basic', 'text': 'قبول المشاركة'});
+    structure.add({'type': 'basic', 'text': 'سبب عدم القبول'});
     structure.add({'type': 'basic', 'text': 'تاريخ البدء'});
     structure.add({'type': 'basic', 'text': 'تاريخ الإنهاء'});
     structure.add({'type': 'basic', 'text': 'الحالة'});
@@ -635,23 +642,52 @@ class ExcelExportService {
       if (header['type'] == 'basic') {
         // Handle basic info columns
         switch (header['text']) {
+          case 'رقم الاستجابة':
           case 'Response ID':
             cellValue = surveyAnswers.surveyId.toString();
             break;
+          case 'كود الاستبيان':
           case 'Survey Code':
             cellValue = surveyAnswers.surveyCode;
             break;
+          case 'اسم الاستبيان':
           case 'Survey Name':
             cellValue = survey.name;
             break;
+          case 'اسم الباحث':
+            cellValue = surveyAnswers.researcherName ?? '';
+            break;
+          case 'اسم المشرف':
+            cellValue = surveyAnswers.supervisorName ?? '';
+            break;
+          case 'اسم المدينة':
+            cellValue = surveyAnswers.cityName ?? '';
+            break;
+          case 'اسم الحى / القرية':
+            cellValue = surveyAnswers.neighborhoodName ?? '';
+            break;
+          case 'اسم الشارع':
+            cellValue = surveyAnswers.streetName ?? '';
+            break;
+          case 'قبول المشاركة':
+            cellValue = surveyAnswers.isApproved == null 
+                ? '' 
+                : (surveyAnswers.isApproved! ? 'قبل' : 'لم يقبل');
+            break;
+          case 'سبب عدم القبول':
+            cellValue = surveyAnswers.rejectReason ?? '';
+            break;
+          case 'تاريخ البدء':
           case 'Started At':
             cellValue = DateFormat('yyyy-MM-dd HH:mm').format(surveyAnswers.startedAt);
             break;
+          case 'تاريخ الإنهاء':
           case 'Completed At':
             cellValue = surveyAnswers.completedAt != null
                 ? DateFormat('yyyy-MM-dd HH:mm').format(surveyAnswers.completedAt!)
                 : 'غير منتهي';
             break;
+          case 'الحالة':
           case 'Status':
             cellValue = surveyAnswers.isDraft ? 'مسودة' : 'مكتمل';
             break;

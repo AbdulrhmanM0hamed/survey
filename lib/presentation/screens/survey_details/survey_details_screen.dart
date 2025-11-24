@@ -26,6 +26,20 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Check if there are pre-survey info arguments
+      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      if (args != null) {
+        context.read<SurveyDetailsViewModel>().setPreSurveyInfo(
+          researcherName: args['researcherName'] as String?,
+          supervisorName: args['supervisorName'] as String?,
+          cityName: args['cityName'] as String?,
+          neighborhoodName: args['neighborhoodName'] as String?,
+          streetName: args['streetName'] as String?,
+          isApproved: args['isApproved'] as bool?,
+          rejectReason: args['rejectReason'] as String?,
+        );
+      }
+      
       context.read<SurveyDetailsViewModel>().loadSurvey(widget.surveyId);
     });
   }

@@ -96,6 +96,27 @@ class SurveyAnswersModel extends Equatable {
   @HiveField(5)
   final bool isDraft;
 
+  @HiveField(6)
+  final String? researcherName;
+
+  @HiveField(7)
+  final String? supervisorName;
+
+  @HiveField(8)
+  final String? cityName;
+
+  @HiveField(9)
+  final String? neighborhoodName;
+
+  @HiveField(10)
+  final String? streetName;
+
+  @HiveField(11)
+  final bool? isApproved;
+
+  @HiveField(12)
+  final String? rejectReason;
+
   const SurveyAnswersModel({
     required this.surveyId,
     required this.surveyCode,
@@ -103,6 +124,13 @@ class SurveyAnswersModel extends Equatable {
     required this.startedAt,
     this.completedAt,
     required this.isDraft,
+    this.researcherName,
+    this.supervisorName,
+    this.cityName,
+    this.neighborhoodName,
+    this.streetName,
+    this.isApproved,
+    this.rejectReason,
   });
 
   factory SurveyAnswersModel.fromJson(Map<String, dynamic> json) {
@@ -120,6 +148,13 @@ class SurveyAnswersModel extends Equatable {
           ? DateTime.parse(json['completedAt'])
           : null,
       isDraft: json['isDraft'] ?? true,
+      researcherName: json['researcherName'],
+      supervisorName: json['supervisorName'],
+      cityName: json['cityName'],
+      neighborhoodName: json['neighborhoodName'],
+      streetName: json['streetName'],
+      isApproved: json['isApproved'],
+      rejectReason: json['rejectReason'],
     );
   }
 
@@ -131,6 +166,13 @@ class SurveyAnswersModel extends Equatable {
       'startedAt': startedAt.toIso8601String(),
       'completedAt': completedAt?.toIso8601String(),
       'isDraft': isDraft,
+      'researcherName': researcherName,
+      'supervisorName': supervisorName,
+      'cityName': cityName,
+      'neighborhoodName': neighborhoodName,
+      'streetName': streetName,
+      'isApproved': isApproved,
+      'rejectReason': rejectReason,
     };
   }
 
@@ -141,6 +183,13 @@ class SurveyAnswersModel extends Equatable {
     DateTime? startedAt,
     DateTime? completedAt,
     bool? isDraft,
+    String? researcherName,
+    String? supervisorName,
+    String? cityName,
+    String? neighborhoodName,
+    String? streetName,
+    bool? isApproved,
+    String? rejectReason,
   }) {
     return SurveyAnswersModel(
       surveyId: surveyId ?? this.surveyId,
@@ -149,6 +198,13 @@ class SurveyAnswersModel extends Equatable {
       startedAt: startedAt ?? this.startedAt,
       completedAt: completedAt ?? this.completedAt,
       isDraft: isDraft ?? this.isDraft,
+      researcherName: researcherName ?? this.researcherName,
+      supervisorName: supervisorName ?? this.supervisorName,
+      cityName: cityName ?? this.cityName,
+      neighborhoodName: neighborhoodName ?? this.neighborhoodName,
+      streetName: streetName ?? this.streetName,
+      isApproved: isApproved ?? this.isApproved,
+      rejectReason: rejectReason ?? this.rejectReason,
     );
   }
 
@@ -160,5 +216,12 @@ class SurveyAnswersModel extends Equatable {
         startedAt,
         completedAt,
         isDraft,
+        researcherName,
+        supervisorName,
+        cityName,
+        neighborhoodName,
+        streetName,
+        isApproved,
+        rejectReason,
       ];
 }

@@ -38,6 +38,33 @@ class SurveyDetailsViewModel extends ChangeNotifier {
   // Track group repetitions
   final Map<int, int> _groupRepetitions = {};
 
+  String? _researcherName;
+  String? _supervisorName;
+  String? _cityName;
+  String? _neighborhoodName;
+  String? _streetName;
+  bool? _isApproved;
+  String? _rejectReason;
+
+  void setPreSurveyInfo({
+    String? researcherName,
+    String? supervisorName,
+    String? cityName,
+    String? neighborhoodName,
+    String? streetName,
+    bool? isApproved,
+    String? rejectReason,
+  }) {
+    _researcherName = researcherName;
+    _supervisorName = supervisorName;
+    _cityName = cityName;
+    _neighborhoodName = neighborhoodName;
+    _streetName = streetName;
+    _isApproved = isApproved;
+    _rejectReason = rejectReason;
+    print('📝 Pre-survey info set: researcher=$researcherName, supervisor=$supervisorName, city=$cityName, neighborhood=$neighborhoodName, street=$streetName, approved=$isApproved, reject=$rejectReason');
+  }
+
   Future<void> loadSurvey(int surveyId) async {
     _setState(SurveyDetailsState.loading);
 
@@ -66,9 +93,19 @@ class SurveyDetailsViewModel extends ChangeNotifier {
               answers: [],
               startedAt: DateTime.now(),
               isDraft: true,
+              researcherName: _researcherName,
+              supervisorName: _supervisorName,
+              cityName: _cityName,
+              neighborhoodName: _neighborhoodName,
+              streetName: _streetName,
+              isApproved: _isApproved,
+              rejectReason: _rejectReason,
             );
-            print('   _surveyAnswers created: $_surveyAnswers');
+            print('   _surveyAnswers created with: researcher=${_researcherName}, supervisor=${_supervisorName}, city=${_cityName}');
             print('   _surveyAnswers is null? ${_surveyAnswers == null}');
+            
+            // Save immediately to update Hive with new fields
+            repository.saveSurveyAnswers(surveyAnswers: _surveyAnswers!);
           },
           (savedAnswers) {
             print('📝 Found saved answers result (success branch)');
@@ -83,10 +120,32 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                 answers: [],
                 startedAt: DateTime.now(),
                 isDraft: true,
+                researcherName: _researcherName,
+                supervisorName: _supervisorName,
+                cityName: _cityName,
+                neighborhoodName: _neighborhoodName,
+                streetName: _streetName,
+                isApproved: _isApproved,
+                rejectReason: _rejectReason,
               );
+              
+              // Save immediately
+              repository.saveSurveyAnswers(surveyAnswers: _surveyAnswers!);
             } else {
-              print('   Loading saved answers');
-              _surveyAnswers = savedAnswers;
+              print('   Loading saved answers and updating with new pre-survey info');
+              _surveyAnswers = savedAnswers.copyWith(
+                researcherName: _researcherName,
+                supervisorName: _supervisorName,
+                cityName: _cityName,
+                neighborhoodName: _neighborhoodName,
+                streetName: _streetName,
+                isApproved: _isApproved,
+                rejectReason: _rejectReason,
+              );
+              print('   Updated: researcher=${_researcherName}, supervisor=${_supervisorName}, city=${_cityName}');
+              
+              // Save updated survey answers with new pre-survey info
+              repository.saveSurveyAnswers(surveyAnswers: _surveyAnswers!);
             }
             print('   _surveyAnswers loaded with ${_surveyAnswers?.answers.length ?? 0} answers');
             print('   _surveyAnswers is null? ${_surveyAnswers == null}');

@@ -69,13 +69,20 @@ class SurveyAnswersModelAdapter extends TypeAdapter<SurveyAnswersModel> {
       startedAt: fields[3] as DateTime,
       completedAt: fields[4] as DateTime?,
       isDraft: fields[5] as bool,
+      researcherName: fields[6] as String?,
+      supervisorName: fields[7] as String?,
+      cityName: fields[8] as String?,
+      neighborhoodName: fields[9] as String?,
+      streetName: fields[10] as String?,
+      isApproved: fields[11] as bool?,
+      rejectReason: fields[12] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, SurveyAnswersModel obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.surveyId)
       ..writeByte(1)
@@ -87,7 +94,21 @@ class SurveyAnswersModelAdapter extends TypeAdapter<SurveyAnswersModel> {
       ..writeByte(4)
       ..write(obj.completedAt)
       ..writeByte(5)
-      ..write(obj.isDraft);
+      ..write(obj.isDraft)
+      ..writeByte(6)
+      ..write(obj.researcherName)
+      ..writeByte(7)
+      ..write(obj.supervisorName)
+      ..writeByte(8)
+      ..write(obj.cityName)
+      ..writeByte(9)
+      ..write(obj.neighborhoodName)
+      ..writeByte(10)
+      ..write(obj.streetName)
+      ..writeByte(11)
+      ..write(obj.isApproved)
+      ..writeByte(12)
+      ..write(obj.rejectReason);
   }
 
   @override
