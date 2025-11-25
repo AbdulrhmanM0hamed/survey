@@ -679,12 +679,12 @@ class ExcelExportService {
             break;
           case 'تاريخ البدء':
           case 'Started At':
-            cellValue = DateFormat('yyyy-MM-dd HH:mm').format(surveyAnswers.startedAt);
+            cellValue = DateFormat('yyyy-MM-dd HH:mm:ss').format(surveyAnswers.startedAt);
             break;
           case 'تاريخ الإنهاء':
           case 'Completed At':
             cellValue = surveyAnswers.completedAt != null
-                ? DateFormat('yyyy-MM-dd HH:mm').format(surveyAnswers.completedAt!)
+                ? DateFormat('yyyy-MM-dd HH:mm:ss').format(surveyAnswers.completedAt!)
                 : 'غير منتهي';
             break;
           case 'الحالة':
@@ -767,6 +767,84 @@ class ExcelExportService {
       return value.map((v) => v.toString()).join(', ');
     }
     return value.toString();
+  }
+
+  /// Export to daily Excel file - one file per day with all surveys
+  Future<String?> exportToDailyExcel({
+    required SurveyModel survey,
+    required SurveyAnswersModel surveyAnswers,
+  }) async {
+    print('📊 Starting Daily Excel export...');
+    try {
+      // Request storage permission
+      if (Platform.isAndroid) {
+        final status = await Permission.storage.request();
+        if (!status.isGranted) {
+          final manageStatus = await Permission.manageExternalStorage.request();
+          if (!manageStatus.isGranted) {
+            throw Exception('Storage permission denied');
+          }
+        }
+      }
+
+      // Get today's date for filename
+      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final directory = await _getExportDirectory();
+      final fileName = '${survey.code}_$today.xlsx';
+      final filePath = '${directory.path}/$fileName';
+      final file = File(filePath);
+      
+      print('📁 Daily file: $fileName');
+
+      Excel excel;
+      Sheet sheet;
+
+      const String sheetName = 'Responses';
+      
+      // Check if today's file exists
+      if (await file.exists()) {
+        print('📂 Today\'s file exists, appending...');
+        // Load existing file
+        final bytes = await file.readAsBytes();
+        excel = Excel.decodeBytes(bytes);
+        
+        // Use Responses sheet (should already exist)
+        sheet = excel.sheets[sheetName]!;
+        
+        // Check if we need to expand headers (in case survey structure changed)
+        print('✅ Compatible structure found, checking for header expansion...');
+        _expandHeadersIfNeeded(sheet, survey, surveyAnswers);
+      } else {
+        print('📝 Creating new daily file...');
+        // Create new file
+        excel = Excel.createExcel();
+        
+        // Delete default sheet and create Responses sheet
+        final defaultSheet = excel.getDefaultSheet();
+        if (defaultSheet != null) {
+          excel.delete(defaultSheet);
+        }
+        
+        // Create Responses sheet
+        sheet = excel[sheetName];
+        
+        // Add headers
+        _addHeaders(sheet, survey, surveyAnswers);
+      }
+
+      // Add survey response as new row
+      _addSurveyResponse(sheet, survey, surveyAnswers);
+
+      // Save file
+      final bytes = excel.encode();
+      await file.writeAsBytes(bytes!);
+
+      print('✅ Daily Excel export completed: $filePath');
+      return filePath;
+    } catch (e) {
+      print('❌ Error exporting to daily Excel: $e');
+      return null;
+    }
   }
 
   /// Share Excel file

@@ -179,11 +179,35 @@ class SurveyRepositoryImpl implements SurveyRepository {
   }
 
   @override
+  Future<Either<Failure, List<SurveyAnswersModel>>> getAllCompletedAnswers() async {
+    try {
+      final completedAnswers = await localDataSource.getAllCompletedAnswers();
+      return Right(completedAnswers);
+    } on CacheException catch (e) {
+      return Left(CacheFailure(message: e.message));
+    } catch (e) {
+      return Left(CacheFailure(message: 'حدث خطأ غير متوقع: ${e.toString()}'));
+    }
+  }
+
+  @override
   Future<Either<Failure, void>> deleteSurveyAnswers({
     required int surveyId,
   }) async {
     try {
       await localDataSource.deleteSurveyAnswers(surveyId);
+      return const Right(null);
+    } on CacheException catch (e) {
+      return Left(CacheFailure(message: e.message));
+    } catch (e) {
+      return Left(CacheFailure(message: 'حدث خطأ غير متوقع: ${e.toString()}'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteCompletedSurveyAnswer(String key) async {
+    try {
+      await localDataSource.deleteCompletedSurveyAnswer(key);
       return const Right(null);
     } on CacheException catch (e) {
       return Left(CacheFailure(message: e.message));

@@ -13,7 +13,9 @@ abstract class SurveyLocalDataSource {
   Future<void> saveSurveyAnswers(SurveyAnswersModel surveyAnswers);
   Future<SurveyAnswersModel?> getSurveyAnswers(int surveyId);
   Future<List<SurveyAnswersModel>> getAllDraftAnswers();
+  Future<List<SurveyAnswersModel>> getAllCompletedAnswers();
   Future<void> deleteSurveyAnswers(int surveyId);
+  Future<void> deleteCompletedSurveyAnswer(String key);
 }
 
 class SurveyLocalDataSourceImpl implements SurveyLocalDataSource {
@@ -126,15 +128,27 @@ class SurveyLocalDataSourceImpl implements SurveyLocalDataSource {
   Future<void> saveSurveyAnswers(SurveyAnswersModel surveyAnswers) async {
     try {
       final jsonString = jsonEncode(surveyAnswers.toJson());
-      final boxName = surveyAnswers.isDraft
-          ? HiveService.draftAnswersBox
-          : HiveService.answersBox;
-
-      await HiveService.saveData(
-        boxName: boxName,
-        key: 'survey_answers_${surveyAnswers.surveyId}',
-        value: jsonString,
-      );
+      
+      if (surveyAnswers.isDraft) {
+        // Draft - use simple key (one draft per survey)
+        await HiveService.saveData(
+          boxName: HiveService.draftAnswersBox,
+          key: 'survey_answers_${surveyAnswers.surveyId}',
+          value: jsonString,
+        );
+      } else {
+        // Completed - use unique key with timestamp
+        final timestamp = surveyAnswers.completedAt?.millisecondsSinceEpoch ?? DateTime.now().millisecondsSinceEpoch;
+        final uniqueKey = 'survey_${surveyAnswers.surveyId}_${timestamp}';
+        
+        await HiveService.saveData(
+          boxName: HiveService.answersBox,
+          key: uniqueKey,
+          value: jsonString,
+        );
+        
+        print('✅ Saved completed survey with unique key: $uniqueKey');
+      }
     } catch (e) {
       throw CacheException(message: 'فشل في حفظ إجابات الاستبيان: ${e.toString()}');
     }
@@ -193,6 +207,38 @@ class SurveyLocalDataSourceImpl implements SurveyLocalDataSource {
   }
 
   @override
+  Future<List<SurveyAnswersModel>> getAllCompletedAnswers() async {
+    try {
+      final completedAnswers = <SurveyAnswersModel>[];
+      final allKeys = HiveService.getAllKeys(HiveService.answersBox);
+
+      for (final key in allKeys) {
+        final jsonString = HiveService.getData<String>(
+          boxName: HiveService.answersBox,
+          key: key,
+        );
+
+        if (jsonString != null) {
+          final jsonMap = jsonDecode(jsonString) as Map<String, dynamic>;
+          final surveyAnswers = SurveyAnswersModel.fromJson(jsonMap);
+          
+          // Only add completed (non-draft) surveys
+          if (!surveyAnswers.isDraft) {
+            completedAnswers.add(surveyAnswers);
+          }
+        }
+      }
+
+      print('✅ Found ${completedAnswers.length} completed surveys in local storage');
+      return completedAnswers;
+    } catch (e) {
+      throw CacheException(
+        message: 'فشل في جلب الاستبيانات المكتملة: ${e.toString()}',
+      );
+    }
+  }
+
+  @override
   Future<void> deleteSurveyAnswers(int surveyId) async {
     try {
       final key = 'survey_answers_$surveyId';
@@ -214,6 +260,21 @@ class SurveyLocalDataSourceImpl implements SurveyLocalDataSource {
       }
     } catch (e) {
       throw CacheException(message: 'فشل في حذف الإجابات: ${e.toString()}');
+    }
+  }
+
+  @override
+  Future<void> deleteCompletedSurveyAnswer(String key) async {
+    try {
+      if (HiveService.containsKey(HiveService.answersBox, key)) {
+        await HiveService.deleteData(
+          boxName: HiveService.answersBox,
+          key: key,
+        );
+        print('✅ Deleted completed survey: $key');
+      }
+    } catch (e) {
+      throw CacheException(message: 'فشل في حذف الاستبيان المكتمل: ${e.toString()}');
     }
   }
 }

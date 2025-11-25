@@ -710,8 +710,9 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('تم حفظ الاستبيان بنجاح'),
+                    content: Text('✅ تم إنهاء الاستبيان وحفظه في Excel'),
                     backgroundColor: Colors.green,
+                    duration: Duration(seconds: 3),
                   ),
                 );
                 Navigator.pop(context);

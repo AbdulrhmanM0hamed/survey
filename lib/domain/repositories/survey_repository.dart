@@ -28,7 +28,11 @@ abstract class SurveyRepository {
 
   Future<Either<Failure, List<SurveyAnswersModel>>> getAllDraftAnswers();
 
+  Future<Either<Failure, List<SurveyAnswersModel>>> getAllCompletedAnswers();
+
   Future<Either<Failure, void>> deleteSurveyAnswers({
     required int surveyId,
   });
+
+  Future<Either<Failure, void>> deleteCompletedSurveyAnswer(String key);
 }

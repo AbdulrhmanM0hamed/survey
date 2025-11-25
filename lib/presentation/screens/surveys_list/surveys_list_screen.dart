@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:survey/presentation/screens/pre_survey_info/pre_survey_info_screen.dart';
 import 'package:survey/presentation/screens/surveys_list/viewmodel/surveys_list_viewmodel.dart';
+import 'package:survey/presentation/screens/survey_details/viewmodel/survey_details_viewmodel.dart';
 import 'package:survey/presentation/widgets/survey_card.dart';
 
 class SurveysListScreen extends StatefulWidget {
@@ -38,7 +39,13 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
         centerTitle: true,
         actions: [
           IconButton(
+            icon: const Icon(Icons.cloud_upload, color: Colors.white),
+            tooltip: 'رفع الاستبيانات',
+            onPressed: () => _uploadSurveys(context),
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
+            tooltip: 'تحديث',
             onPressed: () {
               context.read<SurveysListViewModel>().refresh();
             },
@@ -192,5 +199,152 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
         },
       ),
     );
+  }
+
+  Future<void> _uploadSurveys(BuildContext context) async {
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        icon: const Icon(Icons.cloud_upload, color: Colors.blue, size: 48),
+        title: const Text(
+          'رفع الاستبيانات',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'هل تريد رفع جميع الاستبيانات المكتملة إلى السيرفر؟',
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('رفع'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true || !context.mounted) return;
+
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text(
+                  'جاري رفع الاستبيانات...',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      // Upload surveys
+      final viewModel = context.read<SurveyDetailsViewModel>();
+      final result = await viewModel.uploadCompletedSurveys();
+
+      // Close loading dialog
+      if (context.mounted) Navigator.pop(context);
+
+      // Show result
+      if (context.mounted) {
+        final uploaded = result['uploaded'] ?? 0;
+        final failed = result['failed'] ?? 0;
+        final message = result['message'] ?? '';
+
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            icon: Icon(
+              uploaded > 0 ? Icons.check_circle : Icons.error,
+              color: uploaded > 0 ? Colors.green : Colors.red,
+              size: 48,
+            ),
+            title: Text(
+              uploaded > 0 ? 'تم الرفع بنجاح' : 'فشل الرفع',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(message, textAlign: TextAlign.center),
+                if (uploaded > 0 || failed > 0) ...[
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      if (uploaded > 0)
+                        Chip(
+                          avatar: const Icon(Icons.check, color: Colors.white, size: 16),
+                          label: Text('$uploaded نجح'),
+                          backgroundColor: Colors.green,
+                          labelStyle: const TextStyle(color: Colors.white),
+                        ),
+                      if (failed > 0)
+                        Chip(
+                          avatar: const Icon(Icons.close, color: Colors.white, size: 16),
+                          label: Text('$failed فشل'),
+                          backgroundColor: Colors.red,
+                          labelStyle: const TextStyle(color: Colors.white),
+                        ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('حسناً'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading dialog
+      if (context.mounted) Navigator.pop(context);
+
+      // Show error
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('حدث خطأ: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
   }
 }

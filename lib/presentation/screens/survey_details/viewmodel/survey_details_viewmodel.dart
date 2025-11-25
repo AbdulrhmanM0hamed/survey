@@ -1,8 +1,10 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:survey/core/enums/condition_action.dart';
 import 'package:survey/core/enums/condition_operator.dart';
 import 'package:survey/core/enums/target_type.dart';
 import 'package:survey/core/services/excel_export_service.dart';
+import 'package:survey/data/datasources/remote/questionnaire_remote_datasource.dart';
 import 'package:survey/data/models/answer_model.dart';
 import 'package:survey/data/models/question_group_model.dart';
 import 'package:survey/data/models/question_model.dart';
@@ -610,6 +612,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       isDraft: false,
     );
 
+    // Save as completed (with unique key including timestamp)
     final result = await repository.saveSurveyAnswers(
       surveyAnswers: completedAnswers,
     );
@@ -619,8 +622,25 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         _errorMessage = failure.message;
         _setState(SurveyDetailsState.error);
       },
-      (_) {
+      (_) async {
         _surveyAnswers = completedAnswers;
+        
+        // Auto export to Excel
+        try {
+          final excelService = ExcelExportService();
+          final filePath = await excelService.exportToDailyExcel(
+            survey: _survey!,
+            surveyAnswers: completedAnswers,
+          );
+          print('✅ Auto exported to Excel: $filePath');
+        } catch (e) {
+          print('⚠️ Auto export failed: $e');
+        }
+        
+        // Delete draft version after successful completion
+        await repository.deleteSurveyAnswers(surveyId: _survey!.id);
+        print('✅ Survey completed, saved locally, and exported to Excel');
+        
         _setState(SurveyDetailsState.loaded);
       },
     );
@@ -677,7 +697,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     }
   }
 
-  /// Export survey answers to Excel
+  /// Export survey answers to daily Excel file
   Future<String?> exportToExcel() async {
     if (_survey == null || _surveyAnswers == null) {
       throw Exception('No survey data to export');
@@ -686,11 +706,27 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     try {
       _setState(SurveyDetailsState.saving);
       
+      // Ensure completedAt is set before export
+      if (_surveyAnswers!.completedAt == null) {
+        _surveyAnswers = _surveyAnswers!.copyWith(
+          completedAt: DateTime.now(),
+          isDraft: false,
+        );
+        
+        // Save updated survey answers
+        await repository.saveSurveyAnswers(surveyAnswers: _surveyAnswers!);
+        print('✅ Set completedAt before export: ${_surveyAnswers!.completedAt}');
+      }
+      
+      // Export to daily Excel file
       final excelService = ExcelExportService();
-      final filePath = await excelService.exportSurveyToExcel(
+      final filePath = await excelService.exportToDailyExcel(
         survey: _survey!,
         surveyAnswers: _surveyAnswers!,
       );
+
+      // Keep data in local storage
+      print('✅ Data kept in local storage');
 
       _setState(SurveyDetailsState.loaded);
       return filePath;
@@ -701,7 +737,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     }
   }
 
-  /// Export to Excel and delete local data
+  /// Export to daily Excel file (keeps local data)
   Future<Map<String, dynamic>> exportAndClearLocalData() async {
     if (_survey == null || _surveyAnswers == null) {
       throw Exception('No survey data to export');
@@ -710,9 +746,21 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     try {
       _setState(SurveyDetailsState.saving);
 
-      // 1. Export to Excel
+      // Ensure completedAt is set before export
+      if (_surveyAnswers!.completedAt == null) {
+        _surveyAnswers = _surveyAnswers!.copyWith(
+          completedAt: DateTime.now(),
+          isDraft: false,
+        );
+        
+        // Save updated survey answers
+        await repository.saveSurveyAnswers(surveyAnswers: _surveyAnswers!);
+        print('✅ Set completedAt before export: ${_surveyAnswers!.completedAt}');
+      }
+
+      // Export to daily Excel file
       final excelService = ExcelExportService();
-      final filePath = await excelService.exportSurveyToExcel(
+      final filePath = await excelService.exportToDailyExcel(
         survey: _survey!,
         surveyAnswers: _surveyAnswers!,
       );
@@ -721,24 +769,15 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         throw Exception('Failed to export to Excel');
       }
 
-      // 2. Delete local storage
-      await repository.deleteSurveyAnswers(surveyId: _survey!.id);
-
-      // 3. Reset local state
-      _surveyAnswers = SurveyAnswersModel(
-        surveyId: _survey!.id,
-        surveyCode: _survey!.code,
-        answers: [],
-        startedAt: DateTime.now(),
-        isDraft: true,
-      );
+      // Keep data in local storage - don't delete!
+      print('✅ Data kept in local storage for survey ${_survey!.id}');
 
       _setState(SurveyDetailsState.loaded);
       
       return {
         'success': true,
         'filePath': filePath,
-        'message': 'تم التصدير بنجاح وحذف البيانات المحلية',
+        'message': 'تم التصدير بنجاح',
       };
     } catch (e) {
       _errorMessage = 'فشل التصدير والحذف: $e';
@@ -755,6 +794,102 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     } catch (e) {
       _errorMessage = 'فشل مشاركة الملف: $e';
       rethrow;
+    }
+  }
+
+  /// Upload all completed surveys to API
+  Future<Map<String, dynamic>> uploadCompletedSurveys() async {
+    try {
+      _setState(SurveyDetailsState.loading);
+
+      // Get all completed surveys from local storage
+      final result = await repository.getAllCompletedAnswers();
+      
+      List<SurveyAnswersModel> completedSurveys = [];
+      result.fold(
+        (failure) => throw Exception('Failed to load completed surveys: ${failure.message}'),
+        (surveys) => completedSurveys = surveys,
+      );
+      
+      if (completedSurveys.isEmpty) {
+        _setState(SurveyDetailsState.loaded);
+        return {
+          'success': true,
+          'uploaded': 0,
+          'failed': 0,
+          'message': 'لا توجد استبيانات لرفعها',
+        };
+      }
+
+      print('📤 Found ${completedSurveys.length} completed surveys to upload');
+
+      // Initialize API datasource
+      final dio = Dio(BaseOptions(baseUrl: 'http://45.94.209.137:8080/api'));
+      final apiDataSource = QuestionnaireRemoteDataSourceImpl(dio: dio);
+
+      int uploaded = 0;
+      int failed = 0;
+      final failedSurveys = <String>[];
+
+      // Upload each survey one by one
+      for (int i = 0; i < completedSurveys.length; i++) {
+        final surveyAnswers = completedSurveys[i];
+        
+        try {
+          print('📤 Uploading survey ${i + 1}/${completedSurveys.length}: Survey ID ${surveyAnswers.surveyId}');
+          
+          // Convert to API format
+          final apiData = QuestionnaireRemoteDataSourceImpl.convertToApiFormat(surveyAnswers);
+          
+          // Submit to API
+          final success = await apiDataSource.submitQuestionnaire(apiData);
+          
+          if (success) {
+            uploaded++;
+            print('✅ Survey ${i + 1} uploaded successfully');
+            
+            // Delete from local storage after successful upload
+            final key = 'survey_${surveyAnswers.surveyId}_${surveyAnswers.completedAt?.millisecondsSinceEpoch}';
+            await repository.deleteCompletedSurveyAnswer(key);
+            print('🗑️ Deleted from local storage');
+          } else {
+            failed++;
+            failedSurveys.add('Survey ${surveyAnswers.surveyId}');
+            print('⚠️ Survey ${i + 1} upload returned false');
+          }
+          
+          // Small delay between uploads
+          await Future.delayed(const Duration(milliseconds: 500));
+          
+        } catch (e) {
+          failed++;
+          failedSurveys.add('Survey ${surveyAnswers.surveyId}: $e');
+          print('❌ Error uploading survey ${i + 1}: $e');
+        }
+      }
+
+      _setState(SurveyDetailsState.loaded);
+
+      final message = uploaded > 0
+          ? 'تم رفع $uploaded استبيان بنجاح${failed > 0 ? "، فشل رفع $failed" : ""}'
+          : 'فشل رفع جميع الاستبيانات';
+
+      return {
+        'success': uploaded > 0,
+        'uploaded': uploaded,
+        'failed': failed,
+        'failedSurveys': failedSurveys,
+        'message': message,
+      };
+    } catch (e) {
+      _errorMessage = 'فشل رفع الاستبيانات: $e';
+      _setState(SurveyDetailsState.error);
+      return {
+        'success': false,
+        'uploaded': 0,
+        'failed': 0,
+        'message': 'حدث خطأ: $e',
+      };
     }
   }
 
