@@ -33,7 +33,7 @@ class MyApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: 'تطبيق الاستبيانات',
+        title: 'المسح الميداني للباحة',
         debugShowCheckedModeBanner: false,
         locale: const Locale('ar'),
         supportedLocales: const [

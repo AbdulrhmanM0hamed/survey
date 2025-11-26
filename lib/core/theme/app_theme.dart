@@ -7,7 +7,7 @@ class AppTheme {
   // Light Theme
   static ThemeData get lightTheme {
     return ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+      colorScheme: ColorScheme.fromSeed(seedColor: Color(0xff25935F)),
       useMaterial3: true,
       fontFamily: 'Cairo',
       textTheme: const TextTheme(
@@ -94,7 +94,7 @@ class AppTheme {
   static ThemeData get darkTheme {
     return ThemeData(
       colorScheme: ColorScheme.fromSeed(
-        seedColor: Colors.blue,
+        seedColor: Color(0xff25935F),
         brightness: Brightness.dark,
       ),
       useMaterial3: true,

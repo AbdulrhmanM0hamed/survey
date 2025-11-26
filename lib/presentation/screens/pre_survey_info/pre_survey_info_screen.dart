@@ -233,7 +233,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                   Navigator.pop(context); // Go back to surveys list
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
+                  backgroundColor: Color(0xff25935F),
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('حسناً'),
@@ -269,7 +269,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
         appBar: AppBar(
           title: const Text('معلومات ما قبل الاستبيان'),
           centerTitle: true,
-          backgroundColor: Colors.blue,
+          backgroundColor: Color(0xff25935F),
           foregroundColor: Colors.white,
         ),
         body: _isLoading
@@ -292,7 +292,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                           icon: const Icon(Icons.refresh),
                           label: const Text('إعادة المحاولة'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
+                            backgroundColor: Color(0xff25935F),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 32,
@@ -310,7 +310,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                       children: [
                         // Header
                         const Card(
-                          color: Colors.blue,
+                          color: Color(0xff25935F),
                           child: Padding(
                             padding: EdgeInsets.all(16.0),
                             child: Column(
@@ -454,7 +454,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                         ElevatedButton(
                           onPressed: _continue,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
+                            backgroundColor: Color(0xff25935F),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
@@ -506,10 +506,10 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
+                    color: Color(0xff25935F).withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: Colors.blue, size: 24),
+                  child: Icon(icon, color: Color(0xff25935F), size: 24),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -545,7 +545,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Colors.blue, width: 2),
+                  borderSide: const BorderSide(color: Color(0xff25935F), width: 2),
                 ),
                 filled: true,
                 fillColor: Colors.grey.shade50,
@@ -592,10 +592,10 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
+                    color: Color(0xff25935F).withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: Colors.blue, size: 24),
+                  child: Icon(icon, color: Color(0xff25935F), size: 24),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -632,7 +632,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Colors.blue, width: 2),
+                  borderSide: const BorderSide(color: Color(0xff25935F), width: 2),
                 ),
                 filled: true,
                 fillColor: Colors.grey.shade50,
@@ -668,10 +668,10 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
+                    color: Color(0xff25935F).withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.check_circle_outline, color: Colors.blue, size: 24),
+                  child: const Icon(Icons.check_circle_outline, color: Color(0xff25935F), size: 24),
                 ),
                 const SizedBox(width: 12),
                 const Text(
@@ -740,18 +740,18 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         decoration: BoxDecoration(
           border: Border.all(
-            color: isSelected ? Colors.blue : Colors.grey.shade300,
+            color: isSelected ? Color(0xff25935F) : Colors.grey.shade300,
             width: isSelected ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(12),
-          color: isSelected ? Colors.blue.shade50 : Colors.white,
+          color: isSelected ? Color(0xff25935F).withValues(alpha: 0.05) : Colors.white,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
-              color: isSelected ? Colors.blue : Colors.grey,
+              color: isSelected ? Color(0xff25935F) : Colors.grey,
               size: 24,
             ),
             const SizedBox(width: 8),
@@ -760,7 +760,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected ? Colors.blue : Colors.grey.shade700,
+                color: isSelected ? Color(0xff25935F) : Colors.grey.shade700,
               ),
             ),
           ],

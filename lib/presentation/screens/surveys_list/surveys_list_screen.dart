@@ -27,7 +27,7 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.blue,
+        backgroundColor: Color(0xff25935F),
         title: const Text(
           'الاستبيانات',
           style: TextStyle(
@@ -91,7 +91,7 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
                       icon: const Icon(Icons.refresh),
                       label: const Text('إعادة المحاولة'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: Color(0xff25935F),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
@@ -140,7 +140,7 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.blue,
+                    color: Color(0xff25935F),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.grey.shade300,
@@ -209,7 +209,7 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        icon: const Icon(Icons.cloud_upload, color: Colors.blue, size: 48),
+        icon: const Icon(Icons.cloud_upload, color: Color(0xff25935F), size: 48),
         title: const Text(
           'رفع الاستبيانات',
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -226,7 +226,7 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
+              backgroundColor: Color(0xff25935F),
               foregroundColor: Colors.white,
             ),
             child: const Text('رفع'),
@@ -322,7 +322,7 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
               ElevatedButton(
                 onPressed: () => Navigator.pop(context),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
+                  backgroundColor: Color(0xff25935F),
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('حسناً'),

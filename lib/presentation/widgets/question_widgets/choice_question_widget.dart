@@ -86,11 +86,11 @@ class _ChoiceQuestionWidgetState extends State<ChoiceQuestionWidget> {
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
           border: Border.all(
-            color: isSelected ? Colors.blue : Colors.grey.shade300,
+            color: isSelected ? Color(0xff25935F) : Colors.grey.shade300,
             width: isSelected ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(12),
-          color: isSelected ? Colors.blue.shade50 : Colors.white,
+          color: isSelected ? Color(0xff25935F).withValues(alpha: 0.05) : Colors.white,
         ),
         child: CheckboxListTile(
           value: isSelected,
@@ -113,7 +113,7 @@ class _ChoiceQuestionWidgetState extends State<ChoiceQuestionWidget> {
             });
           },
           controlAffinity: ListTileControlAffinity.leading,
-          activeColor: Colors.blue,
+          activeColor: Color(0xff25935F),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -126,11 +126,11 @@ class _ChoiceQuestionWidgetState extends State<ChoiceQuestionWidget> {
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
           border: Border.all(
-            color: isSelected ? Colors.blue : Colors.grey.shade300,
+            color: isSelected ? Color(0xff25935F) : Colors.grey.shade300,
             width: isSelected ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(12),
-          color: isSelected ? Colors.blue.shade50 : Colors.white,
+          color: isSelected ? Color(0xff25935F).withValues(alpha: 0.05) : Colors.white,
         ),
         child: RadioListTile<String>(
           value: choice.code,
@@ -148,7 +148,7 @@ class _ChoiceQuestionWidgetState extends State<ChoiceQuestionWidget> {
             });
           },
           controlAffinity: ListTileControlAffinity.leading,
-          activeColor: Colors.blue,
+          activeColor: Color(0xff25935F),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
