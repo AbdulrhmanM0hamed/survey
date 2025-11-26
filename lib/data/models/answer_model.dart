@@ -20,12 +20,20 @@ class AnswerModel extends Equatable {
   @HiveField(4)
   final int? groupInstanceId; // For repeated groups
 
+  @HiveField(5)
+  final int? questionType; // Question type (0-9)
+
+  @HiveField(6)
+  final int? groupId; // Group ID if in a group
+
   const AnswerModel({
     required this.questionId,
     required this.questionCode,
     required this.value,
     required this.timestamp,
     this.groupInstanceId,
+    this.questionType,
+    this.groupId,
   });
 
   factory AnswerModel.fromJson(Map<String, dynamic> json) {
@@ -37,6 +45,8 @@ class AnswerModel extends Equatable {
           ? DateTime.parse(json['timestamp'])
           : DateTime.now(),
       groupInstanceId: json['groupInstanceId'],
+      questionType: json['questionType'],
+      groupId: json['groupId'],
     );
   }
 
@@ -47,6 +57,8 @@ class AnswerModel extends Equatable {
       'value': value,
       'timestamp': timestamp.toIso8601String(),
       'groupInstanceId': groupInstanceId,
+      'questionType': questionType,
+      'groupId': groupId,
     };
   }
 
@@ -56,6 +68,8 @@ class AnswerModel extends Equatable {
     dynamic value,
     DateTime? timestamp,
     int? groupInstanceId,
+    int? questionType,
+    int? groupId,
   }) {
     return AnswerModel(
       questionId: questionId ?? this.questionId,
@@ -63,6 +77,8 @@ class AnswerModel extends Equatable {
       value: value ?? this.value,
       timestamp: timestamp ?? this.timestamp,
       groupInstanceId: groupInstanceId ?? this.groupInstanceId,
+      questionType: questionType ?? this.questionType,
+      groupId: groupId ?? this.groupId,
     );
   }
 
@@ -73,6 +89,8 @@ class AnswerModel extends Equatable {
         value,
         timestamp,
         groupInstanceId,
+        questionType,
+        groupId,
       ];
 }
 

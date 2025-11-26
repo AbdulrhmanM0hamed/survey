@@ -66,65 +66,70 @@ class QuestionnaireRemoteDataSourceImpl implements QuestionnaireRemoteDataSource
   }
 
   static Map<String, dynamic> _convertAnswer(AnswerModel answer) {
-    // Determine question type from value type
-    String questionType = "Text"; // Default
-    
-    if (answer.value is num || answer.value is int || answer.value is double) {
-      questionType = "Number";
-    } else if (answer.value is DateTime) {
-      questionType = "Date";
-    } else if (answer.value is bool) {
-      questionType = "YesNo";
-    } else if (answer.value is List) {
-      questionType = "Choice";
-    }
-
     final answerMap = {
       "questionId": answer.questionId,
-      "questionType": questionType,
-      "groupId": 0, // No groupId in AnswerModel
-      "repeatIndex": answer.groupInstanceId ?? 0,
+      "questionType": answer.questionType ?? 0, // Use stored type or default to Text (0)
+      "groupId": answer.groupId, // null for non-grouped questions
+      "repeatIndex": answer.groupInstanceId, // null for non-repeating groups
       "valueText": null,
       "valueNumber": null,
       "valueDate": null,
       "valueCode": null,
       "imageBase64": null,
-      "selectedChoices": null,
+      "selectedChoices": [],
     };
 
-    // Add value based on detected type
+    // Add value based on question type
     if (answer.value == null) {
-      answerMap["valueText"] = "";
-    } else if (answer.value is num || answer.value is int || answer.value is double) {
-      answerMap["valueNumber"] = answer.value;
-      answerMap["questionType"] = "Number";
-    } else if (answer.value is DateTime) {
-      answerMap["valueDate"] = (answer.value as DateTime).toIso8601String();
-      answerMap["questionType"] = "Date";
-    } else if (answer.value is bool) {
+      // Keep all fields null/empty
+      return answerMap;
+    }
+    
+    final qType = answer.questionType ?? 0;
+    
+    if (qType == 0) {
+      // Text
+      answerMap["valueText"] = answer.value.toString();
+    } else if (qType == 1 || qType == 2 || qType == 6) {
+      // Integer, Decimal, Rating
+      answerMap["valueNumber"] = answer.value is num 
+          ? answer.value 
+          : num.tryParse(answer.value.toString()) ?? 0;
+    } else if (qType == 3) {
+      // YesNo
       answerMap["valueCode"] = answer.value.toString();
-      answerMap["questionType"] = "YesNo";
-    } else if (answer.value is List) {
-      answerMap["selectedChoices"] = (answer.value as List).map((choiceId) {
-        return {
-          "choiceId": choiceId is int ? choiceId : int.tryParse(choiceId.toString()) ?? 0,
-          "otherText": ""
-        };
-      }).toList();
-      answerMap["questionType"] = "Choice";
-    } else {
-      // String or other types
-      final valueStr = answer.value.toString();
-      
-      // Check if it's a base64 image (starts with common base64 image prefixes or is very long)
-      if (valueStr.length > 1000 && !valueStr.contains(' ')) {
-        // Likely a base64 image
-        answerMap["imageBase64"] = valueStr;
-        answerMap["questionType"] = "Image";
-      } else {
-        // Regular text
-        answerMap["valueText"] = valueStr;
+    } else if (qType == 4 || qType == 5) {
+      // SingleChoice, MultiChoice
+      if (answer.value is List) {
+        answerMap["selectedChoices"] = (answer.value as List).map((choiceId) {
+          return {
+            "choiceId": choiceId is int ? choiceId : int.tryParse(choiceId.toString()) ?? 0,
+            "otherText": null
+          };
+        }).toList();
+      } else if (answer.value is int) {
+        // Single choice stored as int
+        answerMap["selectedChoices"] = [{
+          "choiceId": answer.value,
+          "otherText": null
+        }];
       }
+    } else if (qType == 7) {
+      // Date
+      if (answer.value is DateTime) {
+        answerMap["valueDate"] = (answer.value as DateTime).toIso8601String();
+      } else {
+        answerMap["valueDate"] = answer.value.toString();
+      }
+    } else if (qType == 8) {
+      // Duration
+      answerMap["valueText"] = answer.value.toString();
+    } else if (qType == 9) {
+      // Image
+      answerMap["imageBase64"] = answer.value.toString();
+    } else {
+      // Fallback: treat as text
+      answerMap["valueText"] = answer.value.toString();
     }
 
     return answerMap;

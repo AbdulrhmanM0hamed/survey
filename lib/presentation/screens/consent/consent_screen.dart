@@ -53,7 +53,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
               'neighborhoodName': widget.neighborhoodName,
               'streetName': widget.streetName,
               'isApproved': _isApproved,
-              'rejectReason': _isApproved == false ? _rejectReasonController.text : null,
+              'rejectReason': _isApproved == false ? _rejectReasonController.text.trim() : '',
             },
           ),
         ),

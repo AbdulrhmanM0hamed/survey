@@ -134,19 +134,40 @@ class SurveyDetailsViewModel extends ChangeNotifier {
               // Save immediately
               repository.saveSurveyAnswers(surveyAnswers: _surveyAnswers!);
             } else {
-              print('   Loading saved answers and updating with new pre-survey info');
-              _surveyAnswers = savedAnswers.copyWith(
-                researcherName: _researcherName,
-                supervisorName: _supervisorName,
-                cityName: _cityName,
-                neighborhoodName: _neighborhoodName,
-                streetName: _streetName,
-                isApproved: _isApproved,
-                rejectReason: _rejectReason,
-              );
-              print('   Updated: researcher=${_researcherName}, supervisor=${_supervisorName}, city=${_cityName}');
+              // Check if this is an old draft with no answers - start fresh
+              if (savedAnswers.isDraft && savedAnswers.answers.isEmpty) {
+                print('   Found empty draft, creating new survey with fresh startedAt');
+                _surveyAnswers = SurveyAnswersModel(
+                  surveyId: surveyId,
+                  surveyCode: survey.code,
+                  answers: [],
+                  startedAt: DateTime.now(), // Fresh start time
+                  isDraft: true,
+                  researcherName: _researcherName,
+                  supervisorName: _supervisorName,
+                  cityName: _cityName,
+                  neighborhoodName: _neighborhoodName,
+                  streetName: _streetName,
+                  isApproved: _isApproved,
+                  rejectReason: _rejectReason,
+                );
+              } else {
+                // Has answers - keep the original startedAt
+                print('   Loading saved answers and updating with new pre-survey info');
+                _surveyAnswers = savedAnswers.copyWith(
+                  researcherName: _researcherName,
+                  supervisorName: _supervisorName,
+                  cityName: _cityName,
+                  neighborhoodName: _neighborhoodName,
+                  streetName: _streetName,
+                  isApproved: _isApproved,
+                  rejectReason: _rejectReason,
+                );
+                print('   Updated: researcher=${_researcherName}, supervisor=${_supervisorName}, city=${_cityName}');
+                print('   Keeping original startedAt: ${savedAnswers.startedAt}');
+              }
               
-              // Save updated survey answers with new pre-survey info
+              // Save updated survey answers
               repository.saveSurveyAnswers(surveyAnswers: _surveyAnswers!);
             }
             print('   _surveyAnswers loaded with ${_surveyAnswers?.answers.length ?? 0} answers');
@@ -558,13 +579,58 @@ class SurveyDetailsViewModel extends ChangeNotifier {
 
     print('   ✅ _surveyAnswers exists, proceeding...');
 
+    // Find the question to get its type and groupId
+    QuestionModel? question;
+    int? groupId;
+    
+    print('   🔍 Searching for question $questionId in ${_survey?.sections?.length ?? 0} sections');
+    
+    for (final section in _survey?.sections ?? []) {
+      print('      Checking section ${section.id}: ${section.questions.length} direct questions, ${section.questionGroups.length} groups');
+      
+      // Search in direct questions
+      for (final q in section.questions) {
+        if (q.id == questionId) {
+          question = q;
+          print('      ✅ Found in direct questions: type=${q.type}');
+          break;
+        }
+      }
+      
+      // Search in groups
+      if (question == null) {
+        for (final group in section.questionGroups) {
+          print('         Checking group ${group.id} (${group.questions.length} questions)');
+          for (final q in group.questions) {
+            if (q.id == questionId) {
+              question = q;
+              groupId = group.id;
+              print('         ✅ Found in group $groupId: type=${q.type}');
+              break;
+            }
+          }
+          if (question != null) break;
+        }
+      }
+      
+      if (question != null) break;
+    }
+
+    if (question == null) {
+      print('   ⚠️ WARNING: Question $questionId not found in survey structure!');
+    }
+
     final answer = AnswerModel(
       questionId: questionId,
       questionCode: questionCode,
       value: value,
       timestamp: DateTime.now(),
       groupInstanceId: groupInstanceId,
+      questionType: question?.type, // Add question type
+      groupId: groupId, // Add group ID if in a group
     );
+    
+    print('   📋 Final answer: questionType=${question?.type}, groupId=$groupId, groupInstanceId=$groupInstanceId');
 
     final result = await repository.saveAnswer(
       answer: answer,

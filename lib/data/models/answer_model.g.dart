@@ -22,13 +22,15 @@ class AnswerModelAdapter extends TypeAdapter<AnswerModel> {
       value: fields[2] as dynamic,
       timestamp: fields[3] as DateTime,
       groupInstanceId: fields[4] as int?,
+      questionType: fields[5] as int?,
+      groupId: fields[6] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, AnswerModel obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.questionId)
       ..writeByte(1)
@@ -38,7 +40,11 @@ class AnswerModelAdapter extends TypeAdapter<AnswerModel> {
       ..writeByte(3)
       ..write(obj.timestamp)
       ..writeByte(4)
-      ..write(obj.groupInstanceId);
+      ..write(obj.groupInstanceId)
+      ..writeByte(5)
+      ..write(obj.questionType)
+      ..writeByte(6)
+      ..write(obj.groupId);
   }
 
   @override
