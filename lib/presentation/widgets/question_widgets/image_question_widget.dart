@@ -24,6 +24,17 @@ class _ImageQuestionWidgetState extends State<ImageQuestionWidget> {
   String? _base64Image;
   final ImagePicker _picker = ImagePicker();
 
+  /// Extract pure base64 string from data URI (removes "data:image/...;base64," prefix)
+  String _extractBase64(String base64String) {
+    if (base64String.startsWith('data:image')) {
+      final commaIndex = base64String.indexOf(',');
+      if (commaIndex != -1) {
+        return base64String.substring(commaIndex + 1);
+      }
+    }
+    return base64String;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -33,7 +44,7 @@ class _ImageQuestionWidgetState extends State<ImageQuestionWidget> {
   @override
   void didUpdateWidget(ImageQuestionWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.initialValue != oldWidget.initialValue) {
+    if (widget.initialValue != oldWidget.initialValue && mounted) {
       setState(() {
         _base64Image = widget.initialValue;
       });
@@ -56,13 +67,31 @@ class _ImageQuestionWidgetState extends State<ImageQuestionWidget> {
         // Convert to base64
         final base64String = base64Encode(bytes);
         
+        // Get MIME type from file extension
+        String mimeType = 'image/jpeg'; // default
+        final extension = image.path.toLowerCase().split('.').last;
+        if (extension == 'png') {
+          mimeType = 'image/png';
+        } else if (extension == 'gif') {
+          mimeType = 'image/gif';
+        } else if (extension == 'webp') {
+          mimeType = 'image/webp';
+        }
+        
+        // Add MIME type prefix to base64 string
+        final base64WithPrefix = 'data:$mimeType;base64,$base64String';
+        
+        // Check if widget is still mounted before calling setState
+        if (!mounted) return;
+        
         setState(() {
-          _base64Image = base64String;
+          _base64Image = base64WithPrefix;
         });
         
-        widget.onChanged(base64String);
+        widget.onChanged(base64WithPrefix);
         
         print('✅ Image captured: ${bytes.length} bytes → ${base64String.length} base64 chars');
+        print('📷 MIME type: $mimeType');
       }
     } catch (e) {
       print('❌ Error picking image: $e');
@@ -115,6 +144,8 @@ class _ImageQuestionWidgetState extends State<ImageQuestionWidget> {
   }
 
   void _removeImage() {
+    if (!mounted) return;
+    
     setState(() {
       _base64Image = null;
     });
@@ -188,7 +219,7 @@ class _ImageQuestionWidgetState extends State<ImageQuestionWidget> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Image.memory(
-              base64Decode(_base64Image!),
+              base64Decode(_extractBase64(_base64Image!)),
               fit: BoxFit.contain,
             ),
           ),

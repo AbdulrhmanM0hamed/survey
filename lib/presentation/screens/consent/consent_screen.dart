@@ -7,6 +7,9 @@ class ConsentScreen extends StatefulWidget {
   final String? researcherName;
   final String? supervisorName;
   final String? cityName;
+  final int? researcherId;
+  final int? supervisorId;
+  final int? cityId;
   final String? neighborhoodName;
   final String? streetName;
 
@@ -17,6 +20,9 @@ class ConsentScreen extends StatefulWidget {
     this.researcherName,
     this.supervisorName,
     this.cityName,
+    this.researcherId,
+    this.supervisorId,
+    this.cityId,
     this.neighborhoodName,
     this.streetName,
   });
@@ -50,6 +56,9 @@ class _ConsentScreenState extends State<ConsentScreen> {
               'researcherName': widget.researcherName,
               'supervisorName': widget.supervisorName,
               'cityName': widget.cityName,
+              'researcherId': widget.researcherId,
+              'supervisorId': widget.supervisorId,
+              'cityId': widget.cityId,
               'neighborhoodName': widget.neighborhoodName,
               'streetName': widget.streetName,
               'isApproved': _isApproved,

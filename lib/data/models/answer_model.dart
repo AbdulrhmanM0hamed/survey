@@ -135,6 +135,15 @@ class SurveyAnswersModel extends Equatable {
   @HiveField(12)
   final String? rejectReason;
 
+  @HiveField(13)
+  final int? researcherId;
+
+  @HiveField(14)
+  final int? supervisorId;
+
+  @HiveField(15)
+  final int? cityId;
+
   const SurveyAnswersModel({
     required this.surveyId,
     required this.surveyCode,
@@ -149,6 +158,9 @@ class SurveyAnswersModel extends Equatable {
     this.streetName,
     this.isApproved,
     this.rejectReason,
+    this.researcherId,
+    this.supervisorId,
+    this.cityId,
   });
 
   factory SurveyAnswersModel.fromJson(Map<String, dynamic> json) {
@@ -173,6 +185,9 @@ class SurveyAnswersModel extends Equatable {
       streetName: json['streetName'],
       isApproved: json['isApproved'],
       rejectReason: json['rejectReason'],
+      researcherId: json['researcherId'],
+      supervisorId: json['supervisorId'],
+      cityId: json['cityId'],
     );
   }
 
@@ -191,6 +206,9 @@ class SurveyAnswersModel extends Equatable {
       'streetName': streetName,
       'isApproved': isApproved,
       'rejectReason': rejectReason,
+      'researcherId': researcherId,
+      'supervisorId': supervisorId,
+      'cityId': cityId,
     };
   }
 
@@ -208,6 +226,9 @@ class SurveyAnswersModel extends Equatable {
     String? streetName,
     bool? isApproved,
     String? rejectReason,
+    int? researcherId,
+    int? supervisorId,
+    int? cityId,
   }) {
     return SurveyAnswersModel(
       surveyId: surveyId ?? this.surveyId,
@@ -223,6 +244,9 @@ class SurveyAnswersModel extends Equatable {
       streetName: streetName ?? this.streetName,
       isApproved: isApproved ?? this.isApproved,
       rejectReason: rejectReason ?? this.rejectReason,
+      researcherId: researcherId ?? this.researcherId,
+      supervisorId: supervisorId ?? this.supervisorId,
+      cityId: cityId ?? this.cityId,
     );
   }
 
@@ -241,5 +265,8 @@ class SurveyAnswersModel extends Equatable {
         streetName,
         isApproved,
         rejectReason,
+        researcherId,
+        supervisorId,
+        cityId,
       ];
 }

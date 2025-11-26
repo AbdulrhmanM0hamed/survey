@@ -33,6 +33,9 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           researcherName: args['researcherName'] as String?,
           supervisorName: args['supervisorName'] as String?,
           cityName: args['cityName'] as String?,
+          researcherId: args['researcherId'] as int?,
+          supervisorId: args['supervisorId'] as int?,
+          cityId: args['cityId'] as int?,
           neighborhoodName: args['neighborhoodName'] as String?,
           streetName: args['streetName'] as String?,
           isApproved: args['isApproved'] as bool?,
@@ -97,16 +100,16 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                       ],
                     ),
                   ),
-                  const PopupMenuItem(
-                    value: 'export_clear',
-                    child: Row(
-                      children: [
-                        Icon(Icons.cloud_upload, color: Color(0xff25935F)),
-                        SizedBox(width: 12),
-                        Text('تصدير وحذف البيانات'),
-                      ],
-                    ),
-                  ),
+                  // const PopupMenuItem(
+                  //   value: 'export_clear',
+                  //   child: Row(
+                  //     children: [
+                  //       Icon(Icons.cloud_upload, color: Color(0xff25935F)),
+                  //       SizedBox(width: 12),
+                  //       Text('تصدير وحذف البيانات'),
+                  //     ],
+                  //   ),
+                  // ),
                 ],
               );
             },
@@ -465,30 +468,30 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '🐛 DEBUG INFO:',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.red.shade900,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Question ID: ${question.id}',
-                        style: TextStyle(fontSize: 11, color: Colors.red.shade800),
-                      ),
-                      Text(
-                        'Question Type: ${question.questionType}',
-                        style: TextStyle(fontSize: 11, color: Colors.red.shade800),
-                      ),
-                      Text(
-                        'Saved answer: ${answer?.value} (${answer?.value.runtimeType})',
-                        style: TextStyle(fontSize: 11, color: Colors.red.shade800),
-                      ),
-                      Text(
-                        'Source Conditions: ${question.sourceConditions.length}',
-                        style: TextStyle(fontSize: 11, color: Colors.red.shade800),
-                      ),
+                      // Text(
+                      //   '🐛 DEBUG INFO:',
+                      //   style: TextStyle(
+                      //     fontSize: 12,
+                      //     color: Colors.red.shade900,
+                      //     fontWeight: FontWeight.bold,
+                      //   ),
+                      // ),
+                      // Text(
+                      //   'Question ID: ${question.id}',
+                      //   style: TextStyle(fontSize: 11, color: Colors.red.shade800),
+                      // ),
+                      // Text(
+                      //   'Question Type: ${question.questionType}',
+                      //   style: TextStyle(fontSize: 11, color: Colors.red.shade800),
+                      // ),
+                      // Text(
+                      //   'Saved answer: ${answer?.value} (${answer?.value.runtimeType})',
+                      //   style: TextStyle(fontSize: 11, color: Colors.red.shade800),
+                      // ),
+                      // Text(
+                      //   'Source Conditions: ${question.sourceConditions.length}',
+                      //   style: TextStyle(fontSize: 11, color: Colors.red.shade800),
+                      // ),
                     ],
                   ),
                 ),
@@ -539,14 +542,14 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  '🔄 DEBUG: Group ID ${group.id}, Repetitions: $repetitions',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.red.shade700,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                // Text(
+                //   '🔄 DEBUG: Group ID ${group.id}, Repetitions: $repetitions',
+                //   style: TextStyle(
+                //     fontSize: 12,
+                //     color: Colors.red.shade700,
+                //     fontWeight: FontWeight.bold,
+                //   ),
+                // ),
               ],
             ),
           ),
@@ -658,7 +661,32 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
             groupInstanceId: instanceIndex,
           );
 
-          if (answer == null || answer.value == null || answer.value.toString().trim().isEmpty) {
+          // Validate based on question type
+          bool isAnswerMissing = false;
+          if (answer == null || answer.value == null) {
+            isAnswerMissing = true;
+          } else {
+            // Check choice questions (type 4 = single, 5 = multi)
+            if (question.type == 4 || question.type == 5) {
+              if (answer.value is List && (answer.value as List).isEmpty) {
+                isAnswerMissing = true;
+              }
+            } 
+            // Check image questions (type 9)
+            else if (question.type == 9) {
+              if (answer.value.toString().trim().isEmpty) {
+                isAnswerMissing = true;
+              }
+            }
+            // Check other types (text, number, etc.)
+            else {
+              if (answer.value.toString().trim().isEmpty) {
+                isAnswerMissing = true;
+              }
+            }
+          }
+
+          if (isAnswerMissing) {
             missingQuestions.add(question.id);
           }
         }
@@ -672,7 +700,32 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
 
       final answer = viewModel.getAnswer(questionId: question.id);
       
-      if (answer == null || answer.value == null || answer.value.toString().trim().isEmpty) {
+      // Validate based on question type
+      bool isAnswerMissing = false;
+      if (answer == null || answer.value == null) {
+        isAnswerMissing = true;
+      } else {
+        // Check choice questions (type 4 = single, 5 = multi)
+        if (question.type == 4 || question.type == 5) {
+          if (answer.value is List && (answer.value as List).isEmpty) {
+            isAnswerMissing = true;
+          }
+        } 
+        // Check image questions (type 9)
+        else if (question.type == 9) {
+          if (answer.value.toString().trim().isEmpty) {
+            isAnswerMissing = true;
+          }
+        }
+        // Check other types (text, number, etc.)
+        else {
+          if (answer.value.toString().trim().isEmpty) {
+            isAnswerMissing = true;
+          }
+        }
+      }
+
+      if (isAnswerMissing) {
         missingQuestions.add(question.id);
       }
     }

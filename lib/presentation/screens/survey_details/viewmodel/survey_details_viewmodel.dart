@@ -43,6 +43,9 @@ class SurveyDetailsViewModel extends ChangeNotifier {
   String? _researcherName;
   String? _supervisorName;
   String? _cityName;
+  int? _researcherId;
+  int? _supervisorId;
+  int? _cityId;
   String? _neighborhoodName;
   String? _streetName;
   bool? _isApproved;
@@ -52,6 +55,9 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     String? researcherName,
     String? supervisorName,
     String? cityName,
+    int? researcherId,
+    int? supervisorId,
+    int? cityId,
     String? neighborhoodName,
     String? streetName,
     bool? isApproved,
@@ -60,11 +66,14 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     _researcherName = researcherName;
     _supervisorName = supervisorName;
     _cityName = cityName;
+    _researcherId = researcherId;
+    _supervisorId = supervisorId;
+    _cityId = cityId;
     _neighborhoodName = neighborhoodName;
     _streetName = streetName;
     _isApproved = isApproved;
     _rejectReason = rejectReason;
-    print('📝 Pre-survey info set: researcher=$researcherName, supervisor=$supervisorName, city=$cityName, neighborhood=$neighborhoodName, street=$streetName, approved=$isApproved, reject=$rejectReason');
+    print('📝 Pre-survey info set: researcher=$researcherName, supervisor=$supervisorName, city=$cityName, IDs: [$researcherId, $supervisorId, $cityId]');
   }
 
   Future<void> loadSurvey(int surveyId) async {
@@ -102,8 +111,12 @@ class SurveyDetailsViewModel extends ChangeNotifier {
               streetName: _streetName,
               isApproved: _isApproved,
               rejectReason: _rejectReason,
+              researcherId: _researcherId,
+              supervisorId: _supervisorId,
+              cityId: _cityId,
             );
             print('   _surveyAnswers created with: researcher=${_researcherName}, supervisor=${_supervisorName}, city=${_cityName}');
+            print('   IDs: researcher=$_researcherId, supervisor=$_supervisorId, city=$_cityId');
             print('   _surveyAnswers is null? ${_surveyAnswers == null}');
             
             // Save immediately to update Hive with new fields
@@ -129,6 +142,9 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                 streetName: _streetName,
                 isApproved: _isApproved,
                 rejectReason: _rejectReason,
+                researcherId: _researcherId,
+                supervisorId: _supervisorId,
+                cityId: _cityId,
               );
               
               // Save immediately
@@ -150,6 +166,9 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                   streetName: _streetName,
                   isApproved: _isApproved,
                   rejectReason: _rejectReason,
+                  researcherId: _researcherId,
+                  supervisorId: _supervisorId,
+                  cityId: _cityId,
                 );
               } else {
                 // Has answers - keep the original startedAt
@@ -162,8 +181,12 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                   streetName: _streetName,
                   isApproved: _isApproved,
                   rejectReason: _rejectReason,
+                  researcherId: _researcherId,
+                  supervisorId: _supervisorId,
+                  cityId: _cityId,
                 );
                 print('   Updated: researcher=${_researcherName}, supervisor=${_supervisorName}, city=${_cityName}');
+                print('   IDs: researcher=$_researcherId, supervisor=$_supervisorId, city=$_cityId');
                 print('   Keeping original startedAt: ${savedAnswers.startedAt}');
               }
               

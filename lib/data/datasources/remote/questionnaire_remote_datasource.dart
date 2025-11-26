@@ -16,6 +16,35 @@ class QuestionnaireRemoteDataSourceImpl implements QuestionnaireRemoteDataSource
       print('📤 Submitting questionnaire to API...');
       print('Data: ${questionnaireData}');
       
+      // Print main data
+      print('📊 Survey Data:');
+      print('  surveyId: ${questionnaireData['surveyId']}');
+      print('  householdCode: ${questionnaireData['householdCode']}');
+      print('  managementInformationIds: ${questionnaireData['managementInformationIds']}');
+      print('  isApproved: ${questionnaireData['isApproved']}');
+      print('  rejectReason: "${questionnaireData['rejectReason']}"');
+      print('  startAt: ${questionnaireData['startAt']}');
+      print('  endAt: ${questionnaireData['endAt']}');
+      print('  status: ${questionnaireData['status']}');
+      print('  answers count: ${(questionnaireData['answers'] as List).length}');
+      
+      // Print each answer separately
+      print('\n📝 Answers:');
+      final answers = questionnaireData['answers'] as List;
+      for (var i = 0; i < answers.length; i++) {
+        final answer = answers[i];
+        print('  Answer ${i + 1}:');
+        print('    questionId: ${answer['questionId']}');
+        print('    questionType: ${answer['questionType']}');
+        print('    groupId: ${answer['groupId']}');
+        print('    repeatIndex: ${answer['repeatIndex']}');
+        print('    valueText: ${answer['valueText']}');
+        print('    valueNumber: ${answer['valueNumber']}');
+        print('    imageBase64: ${answer['imageBase64'] != null ? (answer['imageBase64'].toString().length > 50 ? "${answer['imageBase64'].toString().substring(0, 50)}..." : answer['imageBase64']) : "null"}');
+        print('    selectedChoices: ${answer['selectedChoices']}');
+      }
+      print('\n');
+
       final response = await dio.post(
         '/Questionnaire/save',
         data: questionnaireData,
@@ -23,6 +52,22 @@ class QuestionnaireRemoteDataSourceImpl implements QuestionnaireRemoteDataSource
 
       if (response.statusCode == 200) {
         print('✅ Questionnaire submitted successfully');
+        print('📥 API Response: ${response.data}');
+        
+        // Check if response has errors
+        if (response.data != null && response.data is Map) {
+          final errorCode = response.data['errorCode'];
+          final errorMessage = response.data['errorMessage'];
+          
+          if (errorCode != null && errorCode != 0) {
+            print('⚠️ API returned error: $errorMessage');
+          }
+          
+          if (errorMessage != null && errorMessage.toString().isNotEmpty) {
+            print('⚠️ API validation message: $errorMessage');
+          }
+        }
+        
         return true;
       }
 
@@ -60,9 +105,20 @@ class QuestionnaireRemoteDataSourceImpl implements QuestionnaireRemoteDataSource
   }
 
   static List<int> _extractManagementIds(SurveyAnswersModel surveyAnswers) {
-    // Extract IDs from researcher, supervisor, city names if available
-    // For now, return empty list - you can enhance this later
-    return [];
+    // Extract IDs from researcher, supervisor, city
+    final List<int> ids = [];
+    
+    if (surveyAnswers.researcherId != null) {
+      ids.add(surveyAnswers.researcherId!);
+    }
+    if (surveyAnswers.supervisorId != null) {
+      ids.add(surveyAnswers.supervisorId!);
+    }
+    if (surveyAnswers.cityId != null) {
+      ids.add(surveyAnswers.cityId!);
+    }
+    
+    return ids;
   }
 
   static Map<String, dynamic> _convertAnswer(AnswerModel answer) {
@@ -70,7 +126,7 @@ class QuestionnaireRemoteDataSourceImpl implements QuestionnaireRemoteDataSource
       "questionId": answer.questionId,
       "questionType": answer.questionType ?? 0, // Use stored type or default to Text (0)
       "groupId": answer.groupId, // null for non-grouped questions
-      "repeatIndex": answer.groupInstanceId, // null for non-repeating groups
+      "repeatIndex": answer.groupInstanceId != null ? answer.groupInstanceId! + 1 : null, // API expects 1-indexed, app uses 0-indexed
       "valueText": null,
       "valueNumber": null,
       "valueDate": null,
@@ -80,12 +136,12 @@ class QuestionnaireRemoteDataSourceImpl implements QuestionnaireRemoteDataSource
     };
 
     // Add value based on question type
+    final qType = answer.questionType ?? 0;
+    
+    // If value is null, return empty answer (all fields remain null/empty)
     if (answer.value == null) {
-      // Keep all fields null/empty
       return answerMap;
     }
-    
-    final qType = answer.questionType ?? 0;
     
     if (qType == 0) {
       // Text

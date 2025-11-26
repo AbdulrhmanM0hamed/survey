@@ -10,6 +10,9 @@ import 'package:survey/data/models/question_model.dart';
 import 'package:survey/data/models/survey_model.dart';
 
 class ExcelExportService {
+  /// Sheet name for responses
+  static const String _sheetName = 'الاستبيانات';
+  
   /// Export survey answers to Excel
   /// Creates a new file per survey or appends to existing one
   Future<String?> exportSurveyToExcel({
@@ -70,7 +73,14 @@ class ExcelExportService {
             // Delete old file and create new one
             await file.delete();
             excel = Excel.createExcel();
-            sheet = excel['Responses'];
+            
+            // Delete default Sheet1 and create our sheet
+            final defaultSheet = excel.getDefaultSheet();
+            if (defaultSheet != null) {
+              excel.delete(defaultSheet);
+            }
+            
+            sheet = excel[_sheetName];
             _addHeaders(sheet, survey, surveyAnswers);
           } else {
             // Compatible structure - check if we need to expand headers
@@ -82,7 +92,14 @@ class ExcelExportService {
         print('📄 File does not exist, creating new file...');
         // Create new Excel file
         excel = Excel.createExcel();
-        sheet = excel['Responses'];
+        
+        // Delete default Sheet1 and create our sheet
+        final defaultSheet = excel.getDefaultSheet();
+        if (defaultSheet != null) {
+          excel.delete(defaultSheet);
+        }
+        
+        sheet = excel[_sheetName];
         
         // Add headers
         _addHeaders(sheet, survey, surveyAnswers);
@@ -799,7 +816,7 @@ class ExcelExportService {
       Excel excel;
       Sheet sheet;
 
-      const String sheetName = 'Responses';
+      const String sheetName = _sheetName;
       
       // Check if today's file exists
       if (await file.exists()) {

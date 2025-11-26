@@ -29,7 +29,7 @@ class _ChoiceQuestionWidgetState extends State<ChoiceQuestionWidget> {
   void initState() {
     super.initState();
     _selectedValue = widget.initialValue ??
-        (widget.isMultiChoice ? <String>[] : null);
+        (widget.isMultiChoice ? <int>[] : null);
   }
 
   @override
@@ -80,7 +80,7 @@ class _ChoiceQuestionWidgetState extends State<ChoiceQuestionWidget> {
 
   Widget _buildChoiceItem(ChoiceModel choice) {
     if (widget.isMultiChoice) {
-      final isSelected = (_selectedValue as List).contains(choice.code);
+      final isSelected = (_selectedValue as List).contains(choice.id);
 
       return Container(
         margin: const EdgeInsets.only(bottom: 8),
@@ -102,11 +102,11 @@ class _ChoiceQuestionWidgetState extends State<ChoiceQuestionWidget> {
           ),
           onChanged: (bool? value) {
             setState(() {
-              List<String> currentList = List.from(_selectedValue as List);
+              List<int> currentList = List.from(_selectedValue as List);
               if (value == true) {
-                currentList.add(choice.code);
+                currentList.add(choice.id);
               } else {
-                currentList.remove(choice.code);
+                currentList.remove(choice.id);
               }
               _selectedValue = currentList;
               widget.onChanged(_selectedValue);
@@ -120,7 +120,7 @@ class _ChoiceQuestionWidgetState extends State<ChoiceQuestionWidget> {
         ),
       );
     } else {
-      final isSelected = _selectedValue == choice.code;
+      final isSelected = _selectedValue == choice.id;
 
       return Container(
         margin: const EdgeInsets.only(bottom: 8),
@@ -132,16 +132,16 @@ class _ChoiceQuestionWidgetState extends State<ChoiceQuestionWidget> {
           borderRadius: BorderRadius.circular(12),
           color: isSelected ? Color(0xff25935F).withValues(alpha: 0.05) : Colors.white,
         ),
-        child: RadioListTile<String>(
-          value: choice.code,
-          groupValue: _selectedValue as String?,
+        child: RadioListTile<int>(
+          value: choice.id,
+          groupValue: _selectedValue as int?,
           title: Text(
             choice.label,
             style: TextStyle(
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
-          onChanged: (String? value) {
+          onChanged: (int? value) {
             setState(() {
               _selectedValue = value;
               widget.onChanged(_selectedValue);
