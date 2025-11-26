@@ -7,7 +7,8 @@ enum QuestionType {
   multiChoice(5, 'اختيارات متعددة', 'MultiChoice'),
   rating(6, 'تقييم', 'Rating'),
   date(7, 'تاريخ', 'Date'),
-  duration(8, 'مدة', 'Duration');
+  duration(8, 'مدة', 'Duration'),
+  image(9, 'صورة', 'Image');
 
   final int value;
   final String displayNameAr;

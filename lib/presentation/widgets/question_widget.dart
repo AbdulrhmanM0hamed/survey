@@ -3,6 +3,7 @@ import 'package:survey/core/enums/question_type.dart';
 import 'package:survey/data/models/question_model.dart';
 import 'package:survey/presentation/widgets/question_widgets/choice_question_widget.dart';
 import 'package:survey/presentation/widgets/question_widgets/date_question_widget.dart';
+import 'package:survey/presentation/widgets/question_widgets/image_question_widget.dart';
 import 'package:survey/presentation/widgets/question_widgets/text_question_widget.dart';
 import 'package:survey/presentation/widgets/question_widgets/yes_no_question_widget.dart';
 
@@ -127,6 +128,14 @@ class QuestionWidget extends StatelessWidget {
               : null,
           onChanged: (date) => onChanged(date.toIso8601String()),
           isRequired: isRequired,
+        );
+
+      case QuestionType.image:
+        return ImageQuestionWidget(
+          questionText: question.text,
+          isRequired: isRequired,
+          initialValue: initialValue?.toString(),
+          onChanged: onChanged,
         );
 
       case QuestionType.rating:

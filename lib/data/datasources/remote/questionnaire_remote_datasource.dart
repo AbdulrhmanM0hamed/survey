@@ -114,7 +114,17 @@ class QuestionnaireRemoteDataSourceImpl implements QuestionnaireRemoteDataSource
       answerMap["questionType"] = "Choice";
     } else {
       // String or other types
-      answerMap["valueText"] = answer.value.toString();
+      final valueStr = answer.value.toString();
+      
+      // Check if it's a base64 image (starts with common base64 image prefixes or is very long)
+      if (valueStr.length > 1000 && !valueStr.contains(' ')) {
+        // Likely a base64 image
+        answerMap["imageBase64"] = valueStr;
+        answerMap["questionType"] = "Image";
+      } else {
+        // Regular text
+        answerMap["valueText"] = valueStr;
+      }
     }
 
     return answerMap;
