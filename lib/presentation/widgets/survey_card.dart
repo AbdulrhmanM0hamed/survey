@@ -28,7 +28,7 @@ class SurveyCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               gradient: LinearGradient(
                 colors: [
-                  Colors.blue.shade50,
+                  Color(0xff25935F).withValues(alpha: 0.05),
                   Colors.white,
                 ],
                 begin: Alignment.topLeft,
@@ -43,12 +43,12 @@ class SurveyCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.blue.shade100,
+                        color: Color(0xff25935F).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         Icons.assignment,
-                        color: Colors.blue.shade700,
+                        color: Color(0xff25935F).withValues(alpha: 0.7),
                         size: 28,
                       ),
                     ),
@@ -139,7 +139,7 @@ class SurveyCard extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
-                    color: Colors.blue,
+                    color: Color(0xff25935F),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(

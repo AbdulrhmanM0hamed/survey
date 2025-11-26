@@ -101,18 +101,18 @@ class _YesNoQuestionWidgetState extends State<YesNoQuestionWidget> {
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         decoration: BoxDecoration(
           border: Border.all(
-            color: isSelected ? Colors.blue : Colors.grey.shade300,
+            color: isSelected ? Color(0xff25935F) : Colors.grey.shade300,
             width: isSelected ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(12),
-          color: isSelected ? Colors.blue.shade50 : Colors.white,
+          color: isSelected ? Color(0xff25935F).withValues(alpha: 0.05) : Colors.white,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
-              color: isSelected ? Colors.blue : Colors.grey,
+              color: isSelected ? Color(0xff25935F) : Colors.grey,
               size: 24,
             ),
             const SizedBox(width: 8),
@@ -121,7 +121,7 @@ class _YesNoQuestionWidgetState extends State<YesNoQuestionWidget> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected ? Colors.blue : Colors.grey.shade700,
+                color: isSelected ? Color(0xff25935F) : Colors.grey.shade700,
               ),
             ),
           ],

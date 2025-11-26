@@ -56,7 +56,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.blue,
+        backgroundColor: Color(0xff25935F),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -101,7 +101,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                     value: 'export_clear',
                     child: Row(
                       children: [
-                        Icon(Icons.cloud_upload, color: Colors.blue),
+                        Icon(Icons.cloud_upload, color: Color(0xff25935F)),
                         SizedBox(width: 12),
                         Text('تصدير وحذف البيانات'),
                       ],
@@ -150,7 +150,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                       icon: const Icon(Icons.refresh),
                       label: const Text('إعادة المحاولة'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: Color(0xff25935F),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
@@ -183,7 +183,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.blue,
+                  color: Color(0xff25935F),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.grey.shade300,
@@ -316,7 +316,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
+                          backgroundColor: Color(0xff25935F),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -367,14 +367,14 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.blue.shade700, Colors.blue.shade500],
+              colors: [Color(0xff25935F).withValues(alpha: 0.7), Color(0xff25935F).withValues(alpha: 0.5)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.blue.shade200,
+                color: Color(0xff25935F).withValues(alpha: 0.2),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -515,16 +515,16 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
             padding: const EdgeInsets.all(16),
             margin: const EdgeInsets.only(bottom: 12),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: Color(0xff25935F).withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.blue.shade200),
+              border: Border.all(color: Color(0xff25935F).withValues(alpha: 0.2)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Icon(Icons.group_work, color: Colors.blue.shade700),
+                    Icon(Icons.group_work, color: Color(0xff25935F).withValues(alpha: 0.7)),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -532,7 +532,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
-                          color: Colors.blue.shade900,
+                          color: Color(0xff25935F).withValues(alpha: 0.9),
                         ),
                       ),
                     ),
@@ -719,7 +719,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
+              backgroundColor: Color(0xff25935F),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -990,7 +990,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                           icon: const Icon(Icons.share),
                           label: const Text('مشاركة'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
+                            backgroundColor: Color(0xff25935F),
                             foregroundColor: Colors.white,
                           ),
                         ),
@@ -1077,7 +1077,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
             icon: const Icon(Icons.share),
             label: const Text('مشاركة'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
+              backgroundColor: Color(0xff25935F),
               foregroundColor: Colors.white,
             ),
           ),
