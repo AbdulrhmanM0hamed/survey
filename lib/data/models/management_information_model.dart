@@ -73,6 +73,13 @@ class ManagementInformationResponse extends Equatable {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'items': items.map((item) => item.toJson()).toList(),
+      'total': total,
+    };
+  }
+
   @override
   List<Object?> get props => [items, total];
 }

@@ -679,12 +679,12 @@ class ExcelExportService {
             break;
           case 'تاريخ البدء':
           case 'Started At':
-            cellValue = DateFormat('yyyy-MM-dd HH:mm:ss').format(surveyAnswers.startedAt);
+            cellValue = DateFormat('dd/MM/yyyy - hh:mm a', 'ar').format(surveyAnswers.startedAt);
             break;
           case 'تاريخ الإنهاء':
           case 'Completed At':
             cellValue = surveyAnswers.completedAt != null
-                ? DateFormat('yyyy-MM-dd HH:mm:ss').format(surveyAnswers.completedAt!)
+                ? DateFormat('dd/MM/yyyy - hh:mm a', 'ar').format(surveyAnswers.completedAt!)
                 : 'غير منتهي';
             break;
           case 'الحالة':

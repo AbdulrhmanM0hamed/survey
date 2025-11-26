@@ -5,11 +5,7 @@ class SurveyCard extends StatelessWidget {
   final SurveyModel survey;
   final VoidCallback onTap;
 
-  const SurveyCard({
-    super.key,
-    required this.survey,
-    required this.onTap,
-  });
+  const SurveyCard({super.key, required this.survey, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -60,12 +56,10 @@ class SurveyCard extends StatelessWidget {
                           Text(
                             survey.name,
                             style: const TextStyle(
-                              fontSize: 18,
+                              fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: Colors.black87,
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 4),
                           Row(
@@ -128,10 +122,7 @@ class SurveyCard extends StatelessWidget {
                       label: survey.language == 'ar' ? 'عربي' : 'English',
                     ),
                     const SizedBox(width: 12),
-                    _buildInfoChip(
-                      icon: Icons.category,
-                      label: survey.scope,
-                    ),
+                    _buildInfoChip(icon: Icons.category, label: survey.scope),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -154,11 +145,7 @@ class SurveyCard extends StatelessWidget {
                         ),
                       ),
                       SizedBox(width: 8),
-                      Icon(
-                        Icons.arrow_forward,
-                        color: Colors.white,
-                        size: 20,
-                      ),
+                      Icon(Icons.arrow_forward, color: Colors.white, size: 20),
                     ],
                   ),
                 ),
@@ -183,10 +170,7 @@ class SurveyCard extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey.shade700,
-            ),
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
           ),
         ],
       ),

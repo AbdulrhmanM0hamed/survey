@@ -1,12 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:survey/data/models/management_information_model.dart';
-import 'package:survey/data/models/answer_model.dart';
-import 'package:survey/data/models/survey_model.dart';
 import 'package:survey/data/datasources/management_information_remote_datasource.dart';
-import 'package:survey/presentation/screens/survey_details/survey_details_screen.dart';
-import 'package:survey/core/storage/hive_service.dart';
-import 'package:survey/core/services/excel_export_service.dart';
+import 'package:survey/data/datasources/local/management_information_local_datasource.dart';
+import 'package:survey/presentation/screens/consent/consent_screen.dart';
 import 'package:dio/dio.dart';
 
 class PreSurveyInfoScreen extends StatefulWidget {
@@ -32,9 +29,6 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
   
   final TextEditingController _neighborhoodController = TextEditingController();
   final TextEditingController _streetController = TextEditingController();
-  final TextEditingController _rejectReasonController = TextEditingController();
-  
-  bool? _isApproved;
   
   List<ManagementInformationModel> _researchers = [];
   List<ManagementInformationModel> _supervisors = [];
@@ -43,14 +37,16 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   
-  late ManagementInformationRemoteDataSource _dataSource;
+  late ManagementInformationRemoteDataSource _remoteDataSource;
+  late ManagementInformationLocalDataSource _localDataSource;
 
   @override
   void initState() {
     super.initState();
-    // Initialize data source with your base URL
+    // Initialize data sources
     final dio = Dio(BaseOptions(baseUrl: 'http://45.94.209.137:8080/api'));
-    _dataSource = ManagementInformationRemoteDataSourceImpl(dio: dio);
+    _remoteDataSource = ManagementInformationRemoteDataSourceImpl(dio: dio);
+    _localDataSource = ManagementInformationLocalDataSourceImpl();
     _loadData();
   }
 
@@ -58,7 +54,6 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
   void dispose() {
     _neighborhoodController.dispose();
     _streetController.dispose();
-    _rejectReasonController.dispose();
     super.dispose();
   }
 
@@ -69,11 +64,41 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
     });
 
     try {
-      final results = await Future.wait([
-        _dataSource.getManagementInformations(ManagementInformationType.researcherName),
-        _dataSource.getManagementInformations(ManagementInformationType.supervisorName),
-        _dataSource.getManagementInformations(ManagementInformationType.cityName),
-      ]);
+      // Check network connectivity
+      final connectivityResult = await Connectivity().checkConnectivity();
+      final hasConnection = connectivityResult.contains(ConnectivityResult.mobile) ||
+          connectivityResult.contains(ConnectivityResult.wifi) ||
+          connectivityResult.contains(ConnectivityResult.ethernet);
+
+      List<ManagementInformationResponse> results;
+
+      if (hasConnection) {
+        // Try to fetch from remote
+        try {
+          results = await Future.wait([
+            _remoteDataSource.getManagementInformations(ManagementInformationType.researcherName),
+            _remoteDataSource.getManagementInformations(ManagementInformationType.supervisorName),
+            _remoteDataSource.getManagementInformations(ManagementInformationType.cityName),
+          ]);
+
+          // Cache the results
+          await Future.wait([
+            _localDataSource.cacheManagementInformations(ManagementInformationType.researcherName, results[0]),
+            _localDataSource.cacheManagementInformations(ManagementInformationType.supervisorName, results[1]),
+            _localDataSource.cacheManagementInformations(ManagementInformationType.cityName, results[2]),
+          ]);
+          
+          print('✅ Data fetched from API and cached');
+        } catch (e) {
+          print('⚠️ API failed, trying cache: $e');
+          // If API fails, try cache
+          results = await _loadFromCache();
+        }
+      } else {
+        print('📡 No internet, loading from cache');
+        // No connection, use cache
+        results = await _loadFromCache();
+      }
 
       setState(() {
         _researchers = results[0].items;
@@ -89,175 +114,41 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
     }
   }
 
-  Future<void> _continue() async {
-    if (_formKey.currentState!.validate()) {
-      // Check if user rejected participation
-      if (_isApproved == false) {
-        await _handleRejection();
-      } else {
-        // Navigate to survey details with the selected values
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => SurveyDetailsScreen(
-              surveyId: widget.surveyId,
-            ),
-            settings: RouteSettings(
-              arguments: {
-                'surveyId': widget.surveyId,
-                'surveyCode': widget.surveyCode,
-                'researcherName': _selectedResearcher?.name,
-                'supervisorName': _selectedSupervisor?.name,
-                'cityName': _selectedCity?.name,
-                'neighborhoodName': _neighborhoodController.text.trim(),
-                'streetName': _streetController.text.trim(),
-                'isApproved': _isApproved,
-                'rejectReason': _isApproved == false ? _rejectReasonController.text.trim() : null,
-              },
-            ),
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _handleRejection() async {
-    // Show loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
+  Future<List<ManagementInformationResponse>> _loadFromCache() async {
+    final researchers = await _localDataSource.getCachedManagementInformations(
+      ManagementInformationType.researcherName,
+    );
+    final supervisors = await _localDataSource.getCachedManagementInformations(
+      ManagementInformationType.supervisorName,
+    );
+    final cities = await _localDataSource.getCachedManagementInformations(
+      ManagementInformationType.cityName,
     );
 
-    try {
-      // Create completed survey answers with rejection
-      final surveyAnswers = SurveyAnswersModel(
-        surveyId: widget.surveyId,
-        surveyCode: widget.surveyCode,
-        answers: [], // No answers - rejected
-        startedAt: DateTime.now(),
-        completedAt: DateTime.now(),
-        isDraft: false,
-        researcherName: _selectedResearcher?.name,
-        supervisorName: _selectedSupervisor?.name,
-        cityName: _selectedCity?.name,
-        neighborhoodName: _neighborhoodController.text.trim(),
-        streetName: _streetController.text.trim(),
-        isApproved: false,
-        rejectReason: _rejectReasonController.text.trim(),
-      );
+    if (researchers == null || supervisors == null || cities == null) {
+      throw Exception('لا توجد بيانات محفوظة. يرجى الاتصال بالإنترنت أولاً.');
+    }
 
-      // Try to get survey from cache first
-      final cachedSurveyJson = HiveService.getData<String>(
-        boxName: HiveService.surveyDetailsBox,
-        key: 'survey_${widget.surveyId}',
-      );
+    return [researchers, supervisors, cities];
+  }
 
-      SurveyModel? survey;
-      
-      if (cachedSurveyJson != null) {
-        // Use cached survey
-        final jsonMap = jsonDecode(cachedSurveyJson) as Map<String, dynamic>;
-        survey = SurveyModel.fromJson(jsonMap);
-        print('✅ Using cached survey for rejection export');
-      } else {
-        // Try to fetch from API
-        try {
-          final dio = Dio(BaseOptions(baseUrl: 'http://45.94.209.137:8080/api'));
-          final response = await dio.get('/Surveys/${widget.surveyId}');
-          
-          if (response.statusCode == 200 && response.data['errorCode'] == 0) {
-            survey = SurveyModel.fromJson(response.data['data']);
-            print('✅ Fetched survey from API for rejection export');
-          }
-        } catch (apiError) {
-          print('⚠️ Could not fetch survey from API: $apiError');
-        }
-      }
-
-      if (survey != null) {
-        // Export to Excel
-        final excelService = ExcelExportService();
-        await excelService.exportSurveyToExcel(
-          survey: survey,
-          surveyAnswers: surveyAnswers,
-        );
-        print('✅ Excel exported successfully for rejection');
-      } else {
-        // Save to Hive anyway even if Excel export fails
-        await HiveService.saveData(
-          boxName: HiveService.answersBox,
-          key: 'survey_answers_${widget.surveyId}',
-          value: jsonEncode(surveyAnswers.toJson()),
-        );
-        print('💾 Saved rejection to Hive (Excel export skipped - survey not found)');
-      }
-
-      // Close loading dialog
-      if (mounted) Navigator.pop(context);
-
-      // Show success dialog
-      if (mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            icon: const Icon(Icons.check_circle, color: Colors.orange, size: 48),
-            title: const Text('تم تسجيل عدم القبول'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  survey != null 
-                      ? 'تم حفظ البيانات بنجاح في ملف Excel'
-                      : 'تم حفظ البيانات بنجاح (سيتم التصدير لاحقاً)',
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'السبب: ${_rejectReasonController.text.trim()}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-            actions: [
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context); // Close dialog
-                  Navigator.pop(context); // Go back to surveys list
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xff25935F),
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text('حسناً'),
-              ),
-            ],
+  void _continue() {
+    if (_formKey.currentState!.validate()) {
+      // Navigate to consent screen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ConsentScreen(
+            surveyId: widget.surveyId,
+            surveyCode: widget.surveyCode,
+            researcherName: _selectedResearcher?.name,
+            supervisorName: _selectedSupervisor?.name,
+            cityName: _selectedCity?.name,
+            neighborhoodName: _neighborhoodController.text.trim(),
+            streetName: _streetController.text.trim(),
           ),
-        );
-      }
-    } catch (e) {
-      print('❌ Error in _handleRejection: $e');
-      
-      // Close loading dialog
-      if (mounted) Navigator.pop(context);
-
-      // Show error
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('حدث خطأ: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
+        ),
+      );
     }
   }
 
@@ -424,29 +315,6 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                             return null;
                           },
                         ),
-                        
-                        const SizedBox(height: 16),
-                        
-                        // Approval Status
-                        _buildApprovalCard(),
-                        
-                        // Reject Reason (conditional)
-                        if (_isApproved == false) ...[
-                          const SizedBox(height: 16),
-                          _buildTextFieldCard(
-                            title: 'سبب عدم القبول',
-                            icon: Icons.error_outline,
-                            controller: _rejectReasonController,
-                            hintText: 'أدخل سبب عدم القبول',
-                            maxLines: 3,
-                            validator: (value) {
-                              if (_isApproved == false && (value == null || value.trim().isEmpty)) {
-                                return 'يرجى إدخال سبب عدم القبول';
-                              }
-                              return null;
-                            },
-                          ),
-                        ],
                         
                         const SizedBox(height: 32),
                         
@@ -652,120 +520,4 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
     );
   }
 
-  Widget _buildApprovalCard() {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Color(0xff25935F).withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.check_circle_outline, color: Color(0xff25935F), size: 24),
-                ),
-                const SizedBox(width: 12),
-                const Text(
-                  'قبول المشاركة في البحث الميداني',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _isApproved != null ? Colors.green : Colors.red,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildOptionButton(
-                    label: 'قبل',
-                    value: true,
-                    icon: Icons.check_circle,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildOptionButton(
-                    label: 'لم يقبل',
-                    value: false,
-                    icon: Icons.cancel,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOptionButton({
-    required String label,
-    required bool value,
-    required IconData icon,
-  }) {
-    final isSelected = _isApproved == value;
-
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _isApproved = value;
-          if (value == true) {
-            // Clear reject reason if approved
-            _rejectReasonController.clear();
-          }
-        });
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: isSelected ? Color(0xff25935F) : Colors.grey.shade300,
-            width: isSelected ? 2 : 1,
-          ),
-          borderRadius: BorderRadius.circular(12),
-          color: isSelected ? Color(0xff25935F).withValues(alpha: 0.05) : Colors.white,
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? Color(0xff25935F) : Colors.grey,
-              size: 24,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected ? Color(0xff25935F) : Colors.grey.shade700,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

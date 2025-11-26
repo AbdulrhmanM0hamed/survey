@@ -43,13 +43,7 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
             tooltip: 'رفع الاستبيانات',
             onPressed: () => _uploadSurveys(context),
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            tooltip: 'تحديث',
-            onPressed: () {
-              context.read<SurveysListViewModel>().refresh();
-            },
-          ),
+      
         ],
       ),
       body: Consumer<SurveysListViewModel>(
