@@ -198,6 +198,8 @@ class ExcelExportServiceSyncfusion {
       {'type': 'basic', 'text': 'تاريخ البدء'},
       {'type': 'basic', 'text': 'تاريخ الإنهاء'},
       {'type': 'basic', 'text': 'الحالة'},
+      {'type': 'basic', 'text': 'خط العرض (Latitude)'},
+      {'type': 'basic', 'text': 'خط الطول (Longitude)'},
     ]);
 
     // Question columns
@@ -350,9 +352,18 @@ class ExcelExportServiceSyncfusion {
             break;
           case 'اسم الحى / القرية':
             cellValue = surveyAnswers.neighborhoodName ?? '';
+            if (cellValue.isNotEmpty) print('🏘️ Writing Neighborhood: $cellValue');
             break;
           case 'اسم الشارع':
             cellValue = surveyAnswers.streetName ?? '';
+            break;
+          case 'خط العرض (Latitude)':
+            cellValue = surveyAnswers.latitude?.toString() ?? '';
+            if (cellValue.isNotEmpty) print('🌍 Writing Latitude: $cellValue');
+            break;
+          case 'خط الطول (Longitude)':
+            cellValue = surveyAnswers.longitude?.toString() ?? '';
+            if (cellValue.isNotEmpty) print('🌍 Writing Longitude: $cellValue');
             break;
           case 'قبول المشاركة':
             cellValue = surveyAnswers.isApproved == null 
@@ -538,9 +549,18 @@ class ExcelExportServiceSyncfusion {
             break;
           case 'اسم الحى / القرية':
             cellValue = surveyAnswers.neighborhoodName ?? '';
+            if (cellValue.isNotEmpty) print('🏘️ Writing Neighborhood: $cellValue');
             break;
           case 'اسم الشارع':
             cellValue = surveyAnswers.streetName ?? '';
+            break;
+          case 'خط العرض (Latitude)':
+            cellValue = surveyAnswers.latitude?.toString() ?? '';
+            if (cellValue.isNotEmpty) print('🌍 Writing Latitude: $cellValue');
+            break;
+          case 'خط الطول (Longitude)':
+            cellValue = surveyAnswers.longitude?.toString() ?? '';
+            if (cellValue.isNotEmpty) print('🌍 Writing Longitude: $cellValue');
             break;
           case 'قبول المشاركة':
             cellValue = surveyAnswers.isApproved == null 

@@ -52,6 +52,8 @@ class SurveyDetailsViewModel extends ChangeNotifier {
   bool? _isApproved;
   String? _rejectReason;
   DateTime? _startTime;
+  double? _latitude;
+  double? _longitude;
 
   void setPreSurveyInfo({
     String? researcherName,
@@ -65,6 +67,8 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     bool? isApproved,
     String? rejectReason,
     DateTime? startTime,
+    double? latitude,
+    double? longitude,
   }) {
     _researcherName = researcherName;
     _supervisorName = supervisorName;
@@ -77,7 +81,9 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     _isApproved = isApproved;
     _rejectReason = rejectReason;
     _startTime = startTime;
-    print('📝 Pre-survey info set: researcher=$researcherName, supervisor=$supervisorName, city=$cityName, IDs: [$researcherId, $supervisorId, $cityId], startTime=$startTime');
+    _latitude = latitude;
+    _longitude = longitude;
+    print('📝 Pre-survey info set: researcher=$researcherName, supervisor=$supervisorName, city=$cityName, IDs: [$researcherId, $supervisorId, $cityId], startTime=$startTime, location=($latitude, $longitude)');
   }
 
   Future<void> loadSurvey(int surveyId) async {
@@ -118,6 +124,8 @@ class SurveyDetailsViewModel extends ChangeNotifier {
               researcherId: _researcherId,
               supervisorId: _supervisorId,
               cityId: _cityId,
+              latitude: _latitude,
+              longitude: _longitude,
             );
             print('   _surveyAnswers created with: researcher=${_researcherName}, supervisor=${_supervisorName}, city=${_cityName}');
             print('   IDs: researcher=$_researcherId, supervisor=$_supervisorId, city=$_cityId');
@@ -149,6 +157,8 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                 researcherId: _researcherId,
                 supervisorId: _supervisorId,
                 cityId: _cityId,
+                latitude: _latitude,
+                longitude: _longitude,
               );
               
               // Save immediately
@@ -173,6 +183,8 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                   researcherId: _researcherId,
                   supervisorId: _supervisorId,
                   cityId: _cityId,
+                  latitude: _latitude,
+                  longitude: _longitude,
                 );
               } else {
                 // Has answers
@@ -196,6 +208,8 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                   researcherId: _researcherId,
                   supervisorId: _supervisorId,
                   cityId: _cityId,
+                  latitude: _latitude,
+                  longitude: _longitude,
                   startedAt: newStartTime, // Update start time!
                 );
                 print('   Updated: researcher=${_researcherName}, supervisor=${_supervisorName}, city=${_cityName}');
@@ -735,7 +749,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         
         // Auto export to Excel
         try {
-          final excelService = ExcelExportService();
+          final excelService = ExcelExportServiceSyncfusion();
           final filePath = await excelService.exportSurveyToExcel(
             survey: _survey!,
             surveyAnswers: completedAnswers,

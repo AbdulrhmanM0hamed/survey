@@ -49,6 +49,23 @@ class QuestionWidget extends StatelessWidget {
       case QuestionType.text:
       case QuestionType.integer:
       case QuestionType.decimal:
+        // If question has choices, show as single choice (radio buttons)
+        if (question.choices.isNotEmpty) {
+          // Ensure initialValue is int for RadioListTile
+          dynamic safeInitialValue = initialValue;
+          if (safeInitialValue is String) {
+             safeInitialValue = int.tryParse(safeInitialValue);
+          }
+
+          return ChoiceQuestionWidget(
+            question: question,
+            initialValue: safeInitialValue,
+            onChanged: onChanged,
+            isRequired: isRequired,
+            isMultiChoice: false,
+          );
+        }
+
         return TextQuestionWidget(
           question: question,
           initialValue: initialValue?.toString(),

@@ -24,21 +24,21 @@ class PreSurveyInfoScreen extends StatefulWidget {
 
 class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
   final _formKey = GlobalKey<FormState>();
-  
+
   ManagementInformationModel? _selectedResearcher;
   ManagementInformationModel? _selectedSupervisor;
   ManagementInformationModel? _selectedCity;
-  
+
   final TextEditingController _neighborhoodController = TextEditingController();
   final TextEditingController _streetController = TextEditingController();
-  
+
   List<ManagementInformationModel> _researchers = [];
   List<ManagementInformationModel> _supervisors = [];
   List<ManagementInformationModel> _cities = [];
-  
+
   bool _isLoading = true;
   String? _errorMessage;
-  
+
   late ManagementInformationRemoteDataSource _remoteDataSource;
   late ManagementInformationLocalDataSource _localDataSource;
 
@@ -68,7 +68,8 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
     try {
       // Check network connectivity
       final connectivityResult = await Connectivity().checkConnectivity();
-      final hasConnection = connectivityResult.contains(ConnectivityResult.mobile) ||
+      final hasConnection =
+          connectivityResult.contains(ConnectivityResult.mobile) ||
           connectivityResult.contains(ConnectivityResult.wifi) ||
           connectivityResult.contains(ConnectivityResult.ethernet);
 
@@ -78,18 +79,33 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
         // Try to fetch from remote
         try {
           results = await Future.wait([
-            _remoteDataSource.getManagementInformations(ManagementInformationType.researcherName),
-            _remoteDataSource.getManagementInformations(ManagementInformationType.supervisorName),
-            _remoteDataSource.getManagementInformations(ManagementInformationType.cityName),
+            _remoteDataSource.getManagementInformations(
+              ManagementInformationType.researcherName,
+            ),
+            _remoteDataSource.getManagementInformations(
+              ManagementInformationType.supervisorName,
+            ),
+            _remoteDataSource.getManagementInformations(
+              ManagementInformationType.cityName,
+            ),
           ]);
 
           // Cache the results
           await Future.wait([
-            _localDataSource.cacheManagementInformations(ManagementInformationType.researcherName, results[0]),
-            _localDataSource.cacheManagementInformations(ManagementInformationType.supervisorName, results[1]),
-            _localDataSource.cacheManagementInformations(ManagementInformationType.cityName, results[2]),
+            _localDataSource.cacheManagementInformations(
+              ManagementInformationType.researcherName,
+              results[0],
+            ),
+            _localDataSource.cacheManagementInformations(
+              ManagementInformationType.supervisorName,
+              results[1],
+            ),
+            _localDataSource.cacheManagementInformations(
+              ManagementInformationType.cityName,
+              results[2],
+            ),
           ]);
-          
+
           print('✅ Data fetched from API and cached');
         } catch (e) {
           print('⚠️ API failed, trying cache: $e');
@@ -137,7 +153,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
   void _continue() {
     if (_formKey.currentState!.validate()) {
       // Navigate to consent screen
-      Navigator.pushReplacement(
+      Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => ConsentScreen(
@@ -176,7 +192,11 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                        const Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Colors.red,
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           _errorMessage!,
@@ -212,7 +232,11 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                             padding: EdgeInsets.all(16.0),
                             child: Column(
                               children: [
-                                Icon(Icons.info_outline, size: 48, color: Colors.white),
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 48,
+                                  color: Colors.white,
+                                ),
                                 SizedBox(height: 8),
                                 Text(
                                   'يرجى اختيار المعلومات التالية قبل البدء',
@@ -228,70 +252,142 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        
-                        // Researcher Name
-                        _buildDropdownCard(
-                          title: 'اسم الباحث',
-                          icon: Icons.person,
-                          items: _researchers,
-                          selectedValue: _selectedResearcher,
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedResearcher = value;
-                            });
-                          },
-                          validator: (value) {
-                            if (value == null) {
-                              return 'يرجى اختيار اسم الباحث';
-                            }
-                            return null;
-                          },
+
+                        // Researcher Name (only show if has data)
+                        if (_researchers.isNotEmpty) ...[
+                          _buildDropdownCard(
+                            title: 'اسم الباحث',
+                            icon: Icons.person,
+                            items: _researchers,
+                            selectedValue: _selectedResearcher,
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedResearcher = value;
+                              });
+                            },
+                            validator: (value) {
+                              if (value == null) {
+                                return 'يرجى اختيار اسم الباحث';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // Supervisor Name (only show if has data)
+                        if (_supervisors.isNotEmpty) ...[
+                          _buildDropdownCard(
+                            title: 'اسم المشرف',
+                            icon: Icons.supervisor_account,
+                            items: _supervisors,
+                            selectedValue: _selectedSupervisor,
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedSupervisor = value;
+                              });
+                            },
+                            validator: (value) {
+                              if (value == null) {
+                                return 'يرجى اختيار اسم المشرف';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // City Name (Radio Buttons - only show if has data)
+                        if (_cities.isNotEmpty) Card(
+                          elevation: 2,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Color(0xff25935F).withValues(alpha: 0.05),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(Icons.location_city, color: Color(0xff25935F), size: 24),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text(
+                                      'اسم المدينة',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Container(
+                                      width: 12,
+                                      height: 12,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: _selectedCity != null ? Colors.green : Colors.red,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                if (_cities.isEmpty)
+                                  const Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: Text('لا توجد مدن متاحة'),
+                                  )
+                                else
+                                  ..._cities.map((city) {
+                                    return RadioListTile<ManagementInformationModel>(
+                                      title: Text(city.name),
+                                      value: city,
+                                      groupValue: _selectedCity,
+                                      onChanged: (value) {
+                                        setState(() {
+                                          _selectedCity = value;
+                                        });
+                                      },
+                                      activeColor: const Color(0xff25935F),
+                                      contentPadding: EdgeInsets.zero,
+                                    );
+                                  }),
+                                if (_selectedCity == null)
+                                  // Hidden validator to ensure selection
+                                  FormField<ManagementInformationModel>(
+                                    validator: (value) {
+                                      if (_selectedCity == null) return 'يرجى اختيار المدينة';
+                                      return null;
+                                    },
+                                    builder: (state) {
+                                      if (state.hasError) {
+                                        return Padding(
+                                          padding: const EdgeInsets.only(top: 8.0, right: 12.0),
+                                          child: Text(
+                                            state.errorText!,
+                                            style: TextStyle(
+                                              color: Theme.of(context).colorScheme.error,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                      return const SizedBox.shrink();
+                                    },
+                                  ),
+                              ],
+                            ),
+                          ),
                         ),
-                        
+
                         const SizedBox(height: 16),
-                        
-                        // Supervisor Name
-                        _buildDropdownCard(
-                          title: 'اسم المشرف',
-                          icon: Icons.supervisor_account,
-                          items: _supervisors,
-                          selectedValue: _selectedSupervisor,
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedSupervisor = value;
-                            });
-                          },
-                          validator: (value) {
-                            if (value == null) {
-                              return 'يرجى اختيار اسم المشرف';
-                            }
-                            return null;
-                          },
-                        ),
-                        
-                        const SizedBox(height: 16),
-                        
-                        // City Name
-                        _buildDropdownCard(
-                          title: 'اسم المدينة',
-                          icon: Icons.location_city,
-                          items: _cities,
-                          selectedValue: _selectedCity,
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedCity = value;
-                            });
-                          },
-                          validator: (value) {
-                            if (value == null) {
-                              return 'يرجى اختيار اسم المدينة';
-                            }
-                            return null;
-                          },
-                        ),
-                        
-                        const SizedBox(height: 16),
-                        
+
                         // Neighborhood Name
                         _buildTextFieldCard(
                           title: 'اسم الحى / القرية',
@@ -305,9 +401,9 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                             return null;
                           },
                         ),
-                        
+
                         const SizedBox(height: 16),
-                        
+
                         // Street Name
                         _buildTextFieldCard(
                           title: 'اسم الشارع',
@@ -321,9 +417,9 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                             return null;
                           },
                         ),
-                        
+
                         const SizedBox(height: 32),
-                        
+
                         // Continue Button
                         ElevatedButton(
                           onPressed: _continue,
@@ -367,9 +463,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
   }) {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -408,7 +502,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
             DropdownButtonFormField<ManagementInformationModel>(
               value: selectedValue,
               decoration: InputDecoration(
-                hintText: 'اختر $title',
+                hintText: ' $title',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide(color: Colors.grey.shade300),
@@ -419,7 +513,10 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xff25935F), width: 2),
+                  borderSide: const BorderSide(
+                    color: Color(0xff25935F),
+                    width: 2,
+                  ),
                 ),
                 filled: true,
                 fillColor: Colors.grey.shade50,
@@ -429,10 +526,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 ),
               ),
               items: items.map((item) {
-                return DropdownMenuItem(
-                  value: item,
-                  child: Text(item.name),
-                );
+                return DropdownMenuItem(value: item, child: Text(item.name));
               }).toList(),
               onChanged: onChanged,
               validator: validator,
@@ -453,9 +547,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
   }) {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -485,7 +577,9 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                   height: 12,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: controller.text.isNotEmpty ? Colors.green : Colors.red,
+                    color: controller.text.isNotEmpty
+                        ? Colors.green
+                        : Colors.red,
                   ),
                 ),
               ],
@@ -506,7 +600,10 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xff25935F), width: 2),
+                  borderSide: const BorderSide(
+                    color: Color(0xff25935F),
+                    width: 2,
+                  ),
                 ),
                 filled: true,
                 fillColor: Colors.grey.shade50,
@@ -525,5 +622,4 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
       ),
     );
   }
-
 }

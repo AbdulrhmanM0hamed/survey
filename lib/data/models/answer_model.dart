@@ -144,6 +144,12 @@ class SurveyAnswersModel extends Equatable {
   @HiveField(15)
   final int? cityId;
 
+  @HiveField(16)
+  final double? latitude;
+
+  @HiveField(17)
+  final double? longitude;
+
   const SurveyAnswersModel({
     required this.surveyId,
     required this.surveyCode,
@@ -161,6 +167,8 @@ class SurveyAnswersModel extends Equatable {
     this.researcherId,
     this.supervisorId,
     this.cityId,
+    this.latitude,
+    this.longitude,
   });
 
   factory SurveyAnswersModel.fromJson(Map<String, dynamic> json) {
@@ -188,6 +196,8 @@ class SurveyAnswersModel extends Equatable {
       researcherId: json['researcherId'],
       supervisorId: json['supervisorId'],
       cityId: json['cityId'],
+      latitude: json['latitude']?.toDouble(),
+      longitude: json['longitude']?.toDouble(),
     );
   }
 
@@ -209,6 +219,8 @@ class SurveyAnswersModel extends Equatable {
       'researcherId': researcherId,
       'supervisorId': supervisorId,
       'cityId': cityId,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 
@@ -229,6 +241,8 @@ class SurveyAnswersModel extends Equatable {
     int? researcherId,
     int? supervisorId,
     int? cityId,
+    double? latitude,
+    double? longitude,
   }) {
     return SurveyAnswersModel(
       surveyId: surveyId ?? this.surveyId,
@@ -247,6 +261,8 @@ class SurveyAnswersModel extends Equatable {
       researcherId: researcherId ?? this.researcherId,
       supervisorId: supervisorId ?? this.supervisorId,
       cityId: cityId ?? this.cityId,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
     );
   }
 
@@ -268,5 +284,7 @@ class SurveyAnswersModel extends Equatable {
         researcherId,
         supervisorId,
         cityId,
+        latitude,
+        longitude,
       ];
 }

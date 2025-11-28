@@ -25,11 +25,13 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Check if there are pre-survey info arguments
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      final viewModel = context.read<SurveyDetailsViewModel>();
+      
       if (args != null) {
-        context.read<SurveyDetailsViewModel>().setPreSurveyInfo(
+        viewModel.setPreSurveyInfo(
           researcherName: args['researcherName'] as String?,
           supervisorName: args['supervisorName'] as String?,
           cityName: args['cityName'] as String?,
@@ -41,10 +43,68 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           isApproved: args['isApproved'] as bool?,
           rejectReason: args['rejectReason'] as String?,
           startTime: args['startTime'] as DateTime?,
+          latitude: args['latitude'] as double?,
+          longitude: args['longitude'] as double?,
         );
       }
       
-      context.read<SurveyDetailsViewModel>().loadSurvey(widget.surveyId);
+      await viewModel.loadSurvey(widget.surveyId);
+
+      // If survey is rejected, save and exit immediately
+      if (args != null && args['isApproved'] == false) {
+        if (!mounted) return;
+        
+        // Show processing dialog
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: Card(
+              child: Padding(
+                padding: EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('جاري حفظ عدم الموافقة وإنهاء الاستبيان...'),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+
+        try {
+          // Complete survey (saves to Excel and marks as done)
+          await viewModel.completeSurvey();
+          
+          if (!mounted) return;
+          Navigator.pop(context); // Close processing dialog
+          
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(
+               content: Text('✅ تم حفظ رفض الاستبيان بنجاح'),
+               backgroundColor: Colors.green,
+               duration: Duration(seconds: 2),
+             ),
+          );
+          
+          // Go back to home/previous screen
+          Navigator.pop(context);
+        } catch (e) {
+          if (!mounted) return;
+          Navigator.pop(context); // Close processing dialog
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+             SnackBar(
+               content: Text('حدث خطأ أثناء الحفظ: $e'),
+               backgroundColor: Colors.red,
+             ),
+          );
+        }
+      }
     });
   }
 
@@ -70,10 +130,13 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
             return Text(
               viewModel.survey?.name ?? 'الاستبيان',
               style: const TextStyle(
-                fontSize: 20,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
+              textAlign: TextAlign.center,
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
             );
           },
         ),
@@ -561,23 +624,23 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Always show instance number for debugging
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                margin: const EdgeInsets.symmetric(vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.shade300),
-                ),
-                child: Text(
-                  'التكرار ${instanceIndex + 1} من $repetitions',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orange.shade900,
-                  ),
-                ),
-              ),
+              // Container(
+              //   padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              //   margin: const EdgeInsets.symmetric(vertical: 4),
+              //   decoration: BoxDecoration(
+              //     color: Colors.orange.shade100,
+              //     borderRadius: BorderRadius.circular(8),
+              //     border: Border.all(color: Colors.orange.shade300),
+              //   ),
+              //   child: Text(
+              //     'التكرار ${instanceIndex + 1} من $repetitions',
+              //     style: TextStyle(
+              //       fontSize: 14,
+              //       fontWeight: FontWeight.bold,
+              //       color: Colors.orange.shade900,
+              //     ),
+              //   ),
+              // ),
               ...viewModel.getVisibleQuestions(group: group).map((question) {
                 // Find answer for this question and instance
                 AnswerModel? answer;

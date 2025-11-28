@@ -85,13 +85,15 @@ class SurveyAnswersModelAdapter extends TypeAdapter<SurveyAnswersModel> {
       researcherId: fields[13] as int?,
       supervisorId: fields[14] as int?,
       cityId: fields[15] as int?,
+      latitude: fields[16] as double?,
+      longitude: fields[17] as double?,
     );
   }
 
   @override
   void write(BinaryWriter writer, SurveyAnswersModel obj) {
     writer
-      ..writeByte(16)
+      ..writeByte(18)
       ..writeByte(0)
       ..write(obj.surveyId)
       ..writeByte(1)
@@ -123,7 +125,11 @@ class SurveyAnswersModelAdapter extends TypeAdapter<SurveyAnswersModel> {
       ..writeByte(14)
       ..write(obj.supervisorId)
       ..writeByte(15)
-      ..write(obj.cityId);
+      ..write(obj.cityId)
+      ..writeByte(16)
+      ..write(obj.latitude)
+      ..writeByte(17)
+      ..write(obj.longitude);
   }
 
   @override
