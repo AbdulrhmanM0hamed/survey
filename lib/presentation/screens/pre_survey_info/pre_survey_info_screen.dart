@@ -9,11 +9,13 @@ import 'package:dio/dio.dart';
 class PreSurveyInfoScreen extends StatefulWidget {
   final int surveyId;
   final String surveyCode;
+  final DateTime? startTime;
 
   const PreSurveyInfoScreen({
     super.key,
     required this.surveyId,
     required this.surveyCode,
+    this.startTime,
   });
 
   @override
@@ -149,6 +151,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
             cityId: _selectedCity?.id,
             neighborhoodName: _neighborhoodController.text.trim(),
             streetName: _streetController.text.trim(),
+            startTime: widget.startTime,
           ),
         ),
       );

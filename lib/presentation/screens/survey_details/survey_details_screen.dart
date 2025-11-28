@@ -40,6 +40,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           streetName: args['streetName'] as String?,
           isApproved: args['isApproved'] as bool?,
           rejectReason: args['rejectReason'] as String?,
+          startTime: args['startTime'] as DateTime?,
         );
       }
       

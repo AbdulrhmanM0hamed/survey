@@ -25,6 +25,7 @@ class QuestionWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print('🎯 Building QuestionWidget: id=${question.id}, code=${question.code}, type=${question.questionType}, text=${question.text.substring(0, question.text.length > 30 ? 30 : question.text.length)}...');
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(16),

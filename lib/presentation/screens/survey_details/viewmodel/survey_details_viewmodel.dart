@@ -4,6 +4,7 @@ import 'package:survey/core/enums/condition_action.dart';
 import 'package:survey/core/enums/condition_operator.dart';
 import 'package:survey/core/enums/target_type.dart';
 import 'package:survey/core/services/excel_export_service.dart';
+import 'package:survey/core/services/excel_export_service_syncfusion.dart';
 import 'package:survey/data/datasources/remote/questionnaire_remote_datasource.dart';
 import 'package:survey/data/models/answer_model.dart';
 import 'package:survey/data/models/question_group_model.dart';
@@ -50,6 +51,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
   String? _streetName;
   bool? _isApproved;
   String? _rejectReason;
+  DateTime? _startTime;
 
   void setPreSurveyInfo({
     String? researcherName,
@@ -62,6 +64,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     String? streetName,
     bool? isApproved,
     String? rejectReason,
+    DateTime? startTime,
   }) {
     _researcherName = researcherName;
     _supervisorName = supervisorName;
@@ -73,7 +76,8 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     _streetName = streetName;
     _isApproved = isApproved;
     _rejectReason = rejectReason;
-    print('📝 Pre-survey info set: researcher=$researcherName, supervisor=$supervisorName, city=$cityName, IDs: [$researcherId, $supervisorId, $cityId]');
+    _startTime = startTime;
+    print('📝 Pre-survey info set: researcher=$researcherName, supervisor=$supervisorName, city=$cityName, IDs: [$researcherId, $supervisorId, $cityId], startTime=$startTime');
   }
 
   Future<void> loadSurvey(int surveyId) async {
@@ -102,7 +106,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
               surveyId: surveyId,
               surveyCode: survey.code,
               answers: [],
-              startedAt: DateTime.now(),
+              startedAt: _startTime ?? DateTime.now(),
               isDraft: true,
               researcherName: _researcherName,
               supervisorName: _supervisorName,
@@ -133,7 +137,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                 surveyId: surveyId,
                 surveyCode: survey.code,
                 answers: [],
-                startedAt: DateTime.now(),
+                startedAt: _startTime ?? DateTime.now(),
                 isDraft: true,
                 researcherName: _researcherName,
                 supervisorName: _supervisorName,
@@ -157,7 +161,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                   surveyId: surveyId,
                   surveyCode: survey.code,
                   answers: [],
-                  startedAt: DateTime.now(), // Fresh start time
+                  startedAt: _startTime ?? DateTime.now(), // Fresh start time
                   isDraft: true,
                   researcherName: _researcherName,
                   supervisorName: _supervisorName,
@@ -171,8 +175,16 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                   cityId: _cityId,
                 );
               } else {
-                // Has answers - keep the original startedAt
+                // Has answers
                 print('   Loading saved answers and updating with new pre-survey info');
+                
+                // CRITICAL FIX: If startTime is provided (fresh start from list), update startedAt
+                // regardless of whether it has answers or not, because user clicked "Start" now.
+                // Unless you want to strictly preserve history for drafts. 
+                // Given the user request "start starts when I click SurveyCard", we should update it.
+                final newStartTime = _startTime ?? savedAnswers.startedAt;
+                print('   🕒 Updating startedAt from ${savedAnswers.startedAt} to $newStartTime');
+
                 _surveyAnswers = savedAnswers.copyWith(
                   researcherName: _researcherName,
                   supervisorName: _supervisorName,
@@ -184,10 +196,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                   researcherId: _researcherId,
                   supervisorId: _supervisorId,
                   cityId: _cityId,
+                  startedAt: newStartTime, // Update start time!
                 );
                 print('   Updated: researcher=${_researcherName}, supervisor=${_supervisorName}, city=${_cityName}');
                 print('   IDs: researcher=$_researcherId, supervisor=$_supervisorId, city=$_cityId');
-                print('   Keeping original startedAt: ${savedAnswers.startedAt}');
               }
               
               // Save updated survey answers
@@ -224,12 +236,14 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         for (final question in group.questions) {
           _questionVisibility[question.id] = question.isActive;
           _questionRequired[question.id] = question.isRequired;
+          print('📋 Init Group Question ${question.id}: visible=${question.isActive}, required=${question.isRequired}');
         }
       }
 
       for (final question in section.questions) {
         _questionVisibility[question.id] = question.isActive;
         _questionRequired[question.id] = question.isRequired;
+        print('📋 Init Section Question ${question.id}: visible=${question.isActive}, required=${question.isRequired}');
       }
     }
   }
@@ -370,18 +384,23 @@ class SurveyDetailsViewModel extends ChangeNotifier {
   }
 
   void _applyQuestionAction(int questionId, ConditionAction action) {
+    print('🎯 Applying action $action to question $questionId');
     switch (action) {
       case ConditionAction.show:
         _questionVisibility[questionId] = true;
+        print('   ✅ Question $questionId is now VISIBLE');
         break;
       case ConditionAction.hide:
         _questionVisibility[questionId] = false;
+        print('   ❌ Question $questionId is now HIDDEN');
         break;
       case ConditionAction.require:
         _questionRequired[questionId] = true;
+        print('   ⚠️ Question $questionId is now REQUIRED');
         break;
       case ConditionAction.disable:
         _questionVisibility[questionId] = false;
+        print('   🚫 Question $questionId is now DISABLED (hidden)');
         break;
       case ConditionAction.repetition:
         // Not applicable to questions
@@ -717,7 +736,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         // Auto export to Excel
         try {
           final excelService = ExcelExportService();
-          final filePath = await excelService.exportToDailyExcel(
+          final filePath = await excelService.exportSurveyToExcel(
             survey: _survey!,
             surveyAnswers: completedAnswers,
           );
@@ -763,9 +782,18 @@ class SurveyDetailsViewModel extends ChangeNotifier {
   List<QuestionModel> getVisibleQuestions(
       {SectionModel? section, QuestionGroupModel? group}) {
     if (group != null) {
-      return group.questions
+      final allQuestions = group.questions;
+      final visibleQuestions = allQuestions
           .where((question) => isQuestionVisible(question.id))
           .toList();
+      print('📋 getVisibleQuestions for group ${group.id}: ${visibleQuestions.length}/${allQuestions.length} visible');
+      for (var q in allQuestions) {
+        final visible = isQuestionVisible(q.id);
+        if (!visible) {
+          print('   ❌ Question ${q.id} (${q.code}) is HIDDEN');
+        }
+      }
+      return visibleQuestions;
     } else if (section != null) {
       return section.questions
           .where((question) => isQuestionVisible(question.id))
@@ -808,8 +836,8 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       }
       
       // Export to daily Excel file
-      final excelService = ExcelExportService();
-      final filePath = await excelService.exportToDailyExcel(
+      final excelService = ExcelExportServiceSyncfusion();
+      final filePath = await excelService.exportSurveyToExcel(
         survey: _survey!,
         surveyAnswers: _surveyAnswers!,
       );
@@ -848,8 +876,8 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       }
 
       // Export to daily Excel file
-      final excelService = ExcelExportService();
-      final filePath = await excelService.exportToDailyExcel(
+      final excelService = ExcelExportServiceSyncfusion();
+      final filePath = await excelService.exportSurveyToExcel(
         survey: _survey!,
         surveyAnswers: _surveyAnswers!,
       );
@@ -878,7 +906,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
   /// Share exported Excel file
   Future<void> shareExcelFile(String filePath) async {
     try {
-      final excelService = ExcelExportService();
+      final excelService = ExcelExportServiceSyncfusion();
       await excelService.shareExcelFile(filePath);
     } catch (e) {
       _errorMessage = 'فشل مشاركة الملف: $e';
@@ -987,7 +1015,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     if (_survey == null) return null;
     
     try {
-      final excelService = ExcelExportService();
+      final excelService = ExcelExportServiceSyncfusion();
       return await excelService.getSurveyExcelFileInfo(_survey!.id, _survey!.code);
     } catch (e) {
       print('Error getting Excel file info: $e');

@@ -12,6 +12,7 @@ class ConsentScreen extends StatefulWidget {
   final int? cityId;
   final String? neighborhoodName;
   final String? streetName;
+  final DateTime? startTime;
 
   const ConsentScreen({
     super.key,
@@ -25,6 +26,7 @@ class ConsentScreen extends StatefulWidget {
     this.cityId,
     this.neighborhoodName,
     this.streetName,
+    this.startTime,
   });
 
   @override
@@ -63,6 +65,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
               'streetName': widget.streetName,
               'isApproved': _isApproved,
               'rejectReason': _isApproved == false ? _rejectReasonController.text.trim() : '',
+              'startTime': widget.startTime,
             },
           ),
         ),

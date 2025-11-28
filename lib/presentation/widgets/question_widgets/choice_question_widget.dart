@@ -63,9 +63,35 @@ class _ChoiceQuestionWidgetState extends State<ChoiceQuestionWidget> {
           ],
         ),
         const SizedBox(height: 12),
-        ...widget.question.choices.map((choice) {
-          return _buildChoiceItem(choice);
-        }),
+        if (widget.question.choices.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange.shade300),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'لا توجد خيارات متاحة لهذا السؤال',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.orange.shade900,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          ...widget.question.choices.map((choice) {
+            return _buildChoiceItem(choice);
+          }),
       ],
     );
   }
