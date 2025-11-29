@@ -1347,10 +1347,10 @@ class _RatingHeaderDelegate extends SliverPersistentHeaderDelegate {
   ];
 
   @override
-  double get minExtent => 130.0;
+  double get minExtent => 136.0;
 
   @override
-  double get maxExtent => 135.0;
+  double get maxExtent => 136.0;
 
   @override
   Widget build(
