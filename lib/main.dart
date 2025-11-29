@@ -25,21 +25,14 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => Injection.surveysListViewModel,
-        ),
-        ChangeNotifierProvider(
-          create: (_) => Injection.surveyDetailsViewModel,
-        ),
+        ChangeNotifierProvider(create: (_) => Injection.surveysListViewModel),
+        ChangeNotifierProvider(create: (_) => Injection.surveyDetailsViewModel),
       ],
       child: MaterialApp(
         title: 'المسح الميداني للباحة',
         debugShowCheckedModeBanner: false,
         locale: const Locale('ar'),
-        supportedLocales: const [
-          Locale('ar'),
-          Locale('en'),
-        ],
+        supportedLocales: const [Locale('ar'), Locale('en')],
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
