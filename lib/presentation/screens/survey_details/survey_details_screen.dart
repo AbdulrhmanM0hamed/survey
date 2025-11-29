@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:survey/data/models/answer_model.dart';
 import 'package:survey/data/models/question_group_model.dart';
+import 'package:survey/data/models/question_model.dart';
 import 'package:survey/data/models/section_model.dart';
 import 'package:survey/presentation/screens/survey_details/viewmodel/survey_details_viewmodel.dart';
 import 'package:survey/presentation/widgets/question_widget.dart';
+import 'package:survey/presentation/widgets/question_widgets/rating_question_widget.dart';
+import 'package:survey/core/enums/question_type.dart';
 
 class SurveyDetailsScreen extends StatefulWidget {
   final int surveyId;
 
-  const SurveyDetailsScreen({
-    super.key,
-    required this.surveyId,
-  });
+  const SurveyDetailsScreen({super.key, required this.surveyId});
 
   @override
   State<SurveyDetailsScreen> createState() => _SurveyDetailsScreenState();
@@ -27,9 +27,10 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Check if there are pre-survey info arguments
-      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      final args =
+          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       final viewModel = context.read<SurveyDetailsViewModel>();
-      
+
       if (args != null) {
         viewModel.setPreSurveyInfo(
           researcherName: args['researcherName'] as String?,
@@ -47,13 +48,13 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           longitude: args['longitude'] as double?,
         );
       }
-      
+
       await viewModel.loadSurvey(widget.surveyId);
 
       // If survey is rejected, save and exit immediately
       if (args != null && args['isApproved'] == false) {
         if (!mounted) return;
-        
+
         // Show processing dialog
         showDialog(
           context: context,
@@ -78,30 +79,30 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
         try {
           // Complete survey (saves to Excel and marks as done)
           await viewModel.completeSurvey();
-          
+
           if (!mounted) return;
           Navigator.pop(context); // Close processing dialog
-          
+
           // Show success message
           ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(
-               content: Text('✅ تم حفظ رفض الاستبيان بنجاح'),
-               backgroundColor: Colors.green,
-               duration: Duration(seconds: 2),
-             ),
+            const SnackBar(
+              content: Text('✅ تم حفظ رفض الاستبيان بنجاح'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
           );
-          
+
           // Go back to home/previous screen
           Navigator.pop(context);
         } catch (e) {
           if (!mounted) return;
           Navigator.pop(context); // Close processing dialog
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
-             SnackBar(
-               content: Text('حدث خطأ أثناء الحفظ: $e'),
-               backgroundColor: Colors.red,
-             ),
+            SnackBar(
+              content: Text('حدث خطأ أثناء الحفظ: $e'),
+              backgroundColor: Colors.red,
+            ),
           );
         }
       }
@@ -124,306 +125,305 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
       child: Scaffold(
         backgroundColor: Colors.grey.shade100,
         appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Color(0xff25935F),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Consumer<SurveyDetailsViewModel>(
-          builder: (context, viewModel, child) {
-            return Text(
-              viewModel.survey?.name ?? 'الاستبيان',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 4,
-              overflow: TextOverflow.ellipsis,
-            );
-          },
-        ),
-        centerTitle: true,
-        actions: [
-          Consumer<SurveyDetailsViewModel>(
+          elevation: 0,
+          backgroundColor: Color(0xff25935F),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: Consumer<SurveyDetailsViewModel>(
             builder: (context, viewModel, child) {
-              return PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, color: Colors.white),
-                onSelected: (value) async {
-                  if (value == 'export') {
-                    await _showExportDialog(context, viewModel);
-                  } else if (value == 'export_clear') {
-                    await _showExportAndClearDialog(context, viewModel);
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'export',
-                    child: Row(
-                      children: [
-                        Icon(Icons.file_download, color: Colors.green),
-                        SizedBox(width: 12),
-                        Text('تصدير إلى Excel'),
-                      ],
-                    ),
-                  ),
-                  // const PopupMenuItem(
-                  //   value: 'export_clear',
-                  //   child: Row(
-                  //     children: [
-                  //       Icon(Icons.cloud_upload, color: Color(0xff25935F)),
-                  //       SizedBox(width: 12),
-                  //       Text('تصدير وحذف البيانات'),
-                  //     ],
-                  //   ),
-                  // ),
-                ],
+              return Text(
+                viewModel.survey?.name ?? 'الاستبيان',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
               );
             },
           ),
-        ],
-      ),
-      body: Consumer<SurveyDetailsViewModel>(
-        builder: (context, viewModel, child) {
-          if (viewModel.state == SurveyDetailsState.loading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-
-          if (viewModel.state == SurveyDetailsState.error) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 80,
-                      color: Colors.red.shade300,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      viewModel.errorMessage ?? 'حدث خطأ',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.black87,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        viewModel.loadSurvey(widget.surveyId);
-                      },
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('إعادة المحاولة'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xff25935F),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+          centerTitle: true,
+          actions: [
+            Consumer<SurveyDetailsViewModel>(
+              builder: (context, viewModel, child) {
+                return PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, color: Colors.white),
+                  onSelected: (value) async {
+                    if (value == 'export') {
+                      await _showExportDialog(context, viewModel);
+                    } else if (value == 'export_clear') {
+                      await _showExportAndClearDialog(context, viewModel);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'export',
+                      child: Row(
+                        children: [
+                          Icon(Icons.file_download, color: Colors.green),
+                          SizedBox(width: 12),
+                          Text('تصدير إلى Excel'),
+                        ],
                       ),
                     ),
+                    // const PopupMenuItem(
+                    //   value: 'export_clear',
+                    //   child: Row(
+                    //     children: [
+                    //       Icon(Icons.cloud_upload, color: Color(0xff25935F)),
+                    //       SizedBox(width: 12),
+                    //       Text('تصدير وحذف البيانات'),
+                    //     ],
+                    //   ),
+                    // ),
                   ],
-                ),
-              ),
-            );
-          }
+                );
+              },
+            ),
+          ],
+        ),
+        body: Consumer<SurveyDetailsViewModel>(
+          builder: (context, viewModel, child) {
+            if (viewModel.state == SurveyDetailsState.loading) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (viewModel.survey == null ||
-              viewModel.visibleSections.isEmpty) {
-            return const Center(
-              child: Text('لا توجد بيانات'),
-            );
-          }
-
-          final sections = viewModel.visibleSections;
-
-          return Column(
-            children: [
-              // Progress Indicator
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Color(0xff25935F),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.shade300,
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'القسم ${_currentSectionIndex + 1} من ${sections.length}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
+            if (viewModel.state == SurveyDetailsState.error) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 80,
+                        color: Colors.red.shade300,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        viewModel.errorMessage ?? 'حدث خطأ',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.black87,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          viewModel.loadSurvey(widget.surveyId);
+                        },
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('إعادة المحاولة'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xff25935F),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        Text(
-                          '${(((_currentSectionIndex + 1) / sections.length) * 100).toInt()}%',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            if (viewModel.survey == null || viewModel.visibleSections.isEmpty) {
+              return const Center(child: Text('لا توجد بيانات'));
+            }
+
+            final sections = viewModel.visibleSections;
+
+            return Column(
+              children: [
+                // Progress Indicator
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Color(0xff25935F),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.shade300,
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'القسم ${_currentSectionIndex + 1} من ${sections.length}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Text(
+                            '${(((_currentSectionIndex + 1) / sections.length) * 100).toInt()}%',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: LinearProgressIndicator(
+                          value: (_currentSectionIndex + 1) / sections.length,
+                          backgroundColor: Colors.white.withOpacity(0.3),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                          minHeight: 8,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Sections Content
+                Expanded(
+                  child: PageView.builder(
+                    controller: _pageController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: sections.length,
+                    onPageChanged: (index) {
+                      setState(() {
+                        _currentSectionIndex = index;
+                      });
+                    },
+                    itemBuilder: (context, index) {
+                      return _buildSectionContent(sections[index], viewModel);
+                    },
+                  ),
+                ),
+
+                // Navigation Buttons
+                Container(
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    16,
+                    16,
+                    16 + MediaQuery.of(context).padding.bottom,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.shade300,
+                        blurRadius: 4,
+                        offset: const Offset(0, -2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      if (_currentSectionIndex > 0)
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              _pageController.previousPage(
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                              );
+                            },
+                            icon: const Icon(Icons.arrow_back),
+                            label: const Text('السابق'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.grey.shade200,
+                              foregroundColor: Colors.black87,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: LinearProgressIndicator(
-                        value: (_currentSectionIndex + 1) / sections.length,
-                        backgroundColor: Colors.white.withOpacity(0.3),
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          Colors.white,
-                        ),
-                        minHeight: 8,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Sections Content
-              Expanded(
-                child: PageView.builder(
-                  controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: sections.length,
-                  onPageChanged: (index) {
-                    setState(() {
-                      _currentSectionIndex = index;
-                    });
-                  },
-                  itemBuilder: (context, index) {
-                    return _buildSectionContent(sections[index], viewModel);
-                  },
-                ),
-              ),
-
-              // Navigation Buttons
-              Container(
-                padding: EdgeInsets.fromLTRB(
-                  16,
-                  16,
-                  16,
-                  16 + MediaQuery.of(context).padding.bottom,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.shade300,
-                      blurRadius: 4,
-                      offset: const Offset(0, -2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    if (_currentSectionIndex > 0)
+                      if (_currentSectionIndex > 0) const SizedBox(width: 12),
                       Expanded(
-                        child: ElevatedButton.icon(
+                        child: ElevatedButton(
                           onPressed: () {
-                            _pageController.previousPage(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                            );
+                            // Validate current section before proceeding
+                            if (!_validateCurrentSection(
+                              sections[_currentSectionIndex],
+                              viewModel,
+                            )) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'يرجى ملء جميع الحقول المطلوبة قبل المتابعة',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                              return;
+                            }
+
+                            if (_currentSectionIndex < sections.length - 1) {
+                              _pageController.nextPage(
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                              );
+                            } else {
+                              _showCompletionDialog(context, viewModel);
+                            }
                           },
-                          icon: const Icon(Icons.arrow_back),
-                          label: const Text('السابق'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey.shade200,
-                            foregroundColor: Colors.black87,
+                            backgroundColor: Color(0xff25935F),
+                            foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                        ),
-                      ),
-                    if (_currentSectionIndex > 0)
-                      const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          // Validate current section before proceeding
-                          if (!_validateCurrentSection(sections[_currentSectionIndex], viewModel)) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('يرجى ملء جميع الحقول المطلوبة قبل المتابعة'),
-                                backgroundColor: Colors.red,
-                                duration: Duration(seconds: 2),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                _currentSectionIndex < sections.length - 1
+                                    ? 'التالي'
+                                    : 'إنهاء الاستبيان',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            );
-                            return;
-                          }
-
-                          if (_currentSectionIndex < sections.length - 1) {
-                            _pageController.nextPage(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                            );
-                          } else {
-                            _showCompletionDialog(context, viewModel);
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xff25935F),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                              const SizedBox(width: 8),
+                              Icon(
+                                _currentSectionIndex < sections.length - 1
+                                    ? Icons.arrow_forward
+                                    : Icons.check_circle,
+                              ),
+                            ],
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              _currentSectionIndex < sections.length - 1
-                                  ? 'التالي'
-                                  : 'إنهاء الاستبيان',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Icon(
-                              _currentSectionIndex < sections.length - 1
-                                  ? Icons.arrow_forward
-                                  : Icons.check_circle,
-                            ),
-                          ],
-                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          );
-        },
-      ),
+              ],
+            );
+          },
+        ),
       ), // Close GestureDetector
     );
   }
@@ -432,93 +432,171 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
     SectionModel section,
     SurveyDetailsViewModel viewModel,
   ) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
+    // Pre-process questions and groups
+    final groups = viewModel.getVisibleGroups(section);
+    final questions = viewModel.getVisibleQuestions(section: section);
+    final List<Widget> regularWidgets = [];
+    final List<QuestionModel> ratingQuestions = [];
+
+    // Create a map of source question ID to group for quick lookup
+    final Map<int, QuestionGroupModel> sourceQuestionToGroup = {};
+    for (var group in groups) {
+      for (var condition in group.targetConditions) {
+        sourceQuestionToGroup[condition.sourceQuestionId] = group;
+      }
+    }
+
+    // Separate rating questions from other questions
+    for (var question in questions) {
+      if (question.questionType == QuestionType.rating) {
+        ratingQuestions.add(question);
+      } else {
+        // Add non-rating question
+        regularWidgets.add(_buildDirectQuestion(question, viewModel));
+
+        // Check if this question has a related group
+        final relatedGroup = sourceQuestionToGroup[question.id];
+        if (relatedGroup != null) {
+          // Add the related group immediately after the question
+          regularWidgets.add(_buildQuestionGroup(relatedGroup, viewModel));
+          // Remove from groups list to avoid duplicating
+          groups.remove(relatedGroup);
+        }
+      }
+    }
+
+    // Add any remaining groups that weren't linked to questions
+    for (var group in groups) {
+      regularWidgets.add(_buildQuestionGroup(group, viewModel));
+    }
+
+    // Build with CustomScrollView to support sticky header
+    return CustomScrollView(
+      slivers: [
         // Section Title
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xff25935F).withValues(alpha: 0.7), Color(0xff25935F).withValues(alpha: 0.5)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0xff25935F).withValues(alpha: 0.2),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color(0xff25935F).withValues(alpha: 0.7),
+                    Color(0xff25935F).withValues(alpha: 0.5),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                child: const Icon(
-                  Icons.folder,
-                  color: Colors.white,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  section.name,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0xff25935F).withValues(alpha: 0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
                   ),
-                ),
+                ],
               ),
-            ],
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.folder,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      section.name,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 20),
 
-        // Display questions and their related groups together
-        ...() {
-          final groups = viewModel.getVisibleGroups(section);
-          final questions = viewModel.getVisibleQuestions(section: section);
-          final List<Widget> widgets = [];
-          
-          // Create a map of source question ID to group for quick lookup
-          final Map<int, QuestionGroupModel> sourceQuestionToGroup = {};
-          for (var group in groups) {
-            for (var condition in group.targetConditions) {
-              sourceQuestionToGroup[condition.sourceQuestionId] = group;
-            }
-          }
-          
-          // Process each question and add its related group immediately after
-          for (var question in questions) {
-            // Add the question
-            widgets.add(_buildDirectQuestion(question, viewModel));
-            
-            // Check if this question has a related group
-            final relatedGroup = sourceQuestionToGroup[question.id];
-            if (relatedGroup != null) {
-              // Add the related group immediately after the question
-              widgets.add(_buildQuestionGroup(relatedGroup, viewModel));
-              // Remove from groups list to avoid duplicating
-              groups.remove(relatedGroup);
-            }
-          }
-          
-          // Add any remaining groups that weren't linked to questions
-          for (var group in groups) {
-            widgets.add(_buildQuestionGroup(group, viewModel));
-          }
-          
-          return widgets;
-        }(),
+        // Regular questions and groups
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => regularWidgets[index],
+              childCount: regularWidgets.length,
+            ),
+          ),
+        ),
+
+        // Sticky Rating Header (if there are rating questions)
+        if (ratingQuestions.isNotEmpty)
+          SliverPersistentHeader(
+            delegate: _RatingHeaderDelegate(),
+            pinned: true,
+          ),
+
+        // Rating Questions (without individual headers)
+        if (ratingQuestions.isNotEmpty)
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final question = ratingQuestions[index];
+                // Find answer for this question
+                AnswerModel? answer;
+                try {
+                  answer = viewModel.surveyAnswers?.answers.firstWhere(
+                    (a) => a.questionId == question.id,
+                  );
+                } catch (e) {
+                  answer = null;
+                }
+
+                // Convert initialValue to int for rating
+                int? ratingInitialValue;
+                if (answer?.value != null) {
+                  if (answer!.value is int) {
+                    ratingInitialValue = answer.value;
+                  } else if (answer.value is String) {
+                    ratingInitialValue = int.tryParse(answer.value.toString());
+                  }
+                }
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: RatingQuestionWidget(
+                    question: question,
+                    initialValue: ratingInitialValue,
+                    onChanged: (value) async {
+                      try {
+                        await viewModel.saveAnswer(
+                          questionId: question.id,
+                          questionCode: question.code,
+                          value: value,
+                        );
+                      } catch (e, stackTrace) {
+                        print('❌ ERROR in saveAnswer: $e');
+                        print('   StackTrace: $stackTrace');
+                      }
+                    },
+                    isRequired: viewModel.isQuestionRequired(question.id),
+                    showHeader: false, // Don't show individual headers
+                  ),
+                );
+              }, childCount: ratingQuestions.length),
+            ),
+          ),
       ],
     );
   }
@@ -542,7 +620,9 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           initialValue: answer?.value,
           onChanged: (value) async {
             try {
-              print('🔴 Direct Question callback: questionId=${question.id}, code=${question.code}, value=$value');
+              print(
+                '🔴 Direct Question callback: questionId=${question.id}, code=${question.code}, value=$value',
+              );
               print('   Calling viewModel.saveAnswer...');
               await viewModel.saveAnswer(
                 questionId: question.id,
@@ -607,7 +687,9 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
     SurveyDetailsViewModel viewModel,
   ) {
     final repetitions = viewModel.getGroupRepetitions(group.id);
-    print('🎨 Building group ${group.id} (${group.name}) with $repetitions repetitions');
+    print(
+      '🎨 Building group ${group.id} (${group.name}) with $repetitions repetitions',
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -654,7 +736,9 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           // ),
         ],
         ...List.generate(repetitions, (instanceIndex) {
-          print('   📝 Generating instance $instanceIndex for group ${group.id}');
+          print(
+            '   📝 Generating instance $instanceIndex for group ${group.id}',
+          );
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -690,12 +774,15 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                 }
 
                 // Auto-fill member index with (instanceIndex + 1)
-                final initialValue = (question.code == 'IND_MEMBER_INDEX' && answer?.value == null)
+                final initialValue =
+                    (question.code == 'IND_MEMBER_INDEX' &&
+                        answer?.value == null)
                     ? (instanceIndex + 1)
                     : answer?.value;
 
                 // Auto-save member index on first render
-                if (question.code == 'IND_MEMBER_INDEX' && answer?.value == null) {
+                if (question.code == 'IND_MEMBER_INDEX' &&
+                    answer?.value == null) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     viewModel.saveAnswer(
                       questionId: question.id,
@@ -711,7 +798,9 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                   initialValue: initialValue,
                   onChanged: (value) async {
                     try {
-                      print('🔵 QuestionWidget callback: questionId=${question.id}, code=${question.code}, value=$value, instanceIndex=$instanceIndex');
+                      print(
+                        '🔵 QuestionWidget callback: questionId=${question.id}, code=${question.code}, value=$value, instanceIndex=$instanceIndex',
+                      );
                       print('   Calling viewModel.saveAnswer...');
                       await viewModel.saveAnswer(
                         questionId: question.id,
@@ -748,8 +837,12 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
       if (!viewModel.isGroupVisible(group.id)) continue;
 
       final repetitions = viewModel.getGroupRepetitions(group.id);
-      
-      for (int instanceIndex = 0; instanceIndex < repetitions; instanceIndex++) {
+
+      for (
+        int instanceIndex = 0;
+        instanceIndex < repetitions;
+        instanceIndex++
+      ) {
         for (final question in group.questions) {
           if (!viewModel.isQuestionVisible(question.id)) continue;
           if (!viewModel.isQuestionRequired(question.id)) continue;
@@ -770,7 +863,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
               if (answer.value is List && (answer.value as List).isEmpty) {
                 isAnswerMissing = true;
               }
-            } 
+            }
             // Check image questions (type 9)
             else if (question.type == 9) {
               if (answer.value.toString().trim().isEmpty) {
@@ -798,7 +891,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
       if (!viewModel.isQuestionRequired(question.id)) continue;
 
       final answer = viewModel.getAnswer(questionId: question.id);
-      
+
       // Validate based on question type
       bool isAnswerMissing = false;
       if (answer == null || answer.value == null) {
@@ -809,7 +902,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           if (answer.value is List && (answer.value as List).isEmpty) {
             isAnswerMissing = true;
           }
-        } 
+        }
         // Check image questions (type 9)
         else if (question.type == 9) {
           if (answer.value.toString().trim().isEmpty) {
@@ -839,9 +932,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           'إنهاء الاستبيان',
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -892,9 +983,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
             Icon(Icons.file_download, color: Colors.green),
@@ -917,9 +1006,9 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
             onPressed: () async {
               final navigator = Navigator.of(context);
               final scaffoldMessenger = ScaffoldMessenger.of(context);
-              
+
               Navigator.pop(context);
-              
+
               // Show loading
               showDialog(
                 context: context,
@@ -945,11 +1034,11 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                 print('🎯 Starting export from UI...');
                 final filePath = await viewModel.exportToExcel();
                 print('✅ Export completed, filePath: $filePath');
-                
+
                 print('🔄 Closing loading dialog...');
                 navigator.pop(); // Close loading using saved navigator
                 print('✅ Loading dialog closed');
-                
+
                 if (filePath != null) {
                   print('📋 Showing success dialog...');
                   if (mounted) {
@@ -987,9 +1076,12 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
               } catch (e) {
                 print('❌ Export error: $e');
                 navigator.pop(); // Close loading using saved navigator
-                
+
                 // Show error message
-                final errorMessage = e.toString().replaceFirst('Exception: ', '');
+                final errorMessage = e.toString().replaceFirst(
+                  'Exception: ',
+                  '',
+                );
                 scaffoldMessenger.showSnackBar(
                   SnackBar(
                     content: Text(errorMessage),
@@ -1024,17 +1116,12 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
             Icon(Icons.cloud_upload, color: Colors.orange),
             SizedBox(width: 12),
-            Text(
-              'تصدير وحذف',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
+            Text('تصدير وحذف', style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
         content: const Text(
@@ -1051,9 +1138,9 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
             onPressed: () async {
               final navigator = Navigator.of(context);
               final scaffoldMessenger = ScaffoldMessenger.of(context);
-              
+
               Navigator.pop(context);
-              
+
               // Show loading
               showDialog(
                 context: context,
@@ -1079,23 +1166,25 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                 print('🎯 Starting export and clear from UI...');
                 final result = await viewModel.exportAndClearLocalData();
                 print('✅ Export and clear completed: $result');
-                
+
                 print('🔄 Closing loading dialog...');
                 navigator.pop(); // Close loading using saved navigator
                 print('✅ Loading dialog closed');
-                
+
                 if (!mounted) {
                   print('⚠️ Widget not mounted, showing snackbar instead');
                   scaffoldMessenger.showSnackBar(
                     SnackBar(
-                      content: Text('تم التصدير والحذف بنجاح: ${result['filePath']}'),
+                      content: Text(
+                        'تم التصدير والحذف بنجاح: ${result['filePath']}',
+                      ),
                       backgroundColor: Colors.green,
                       duration: const Duration(seconds: 5),
                     ),
                   );
                   return;
                 }
-                
+
                 print('📋 Showing success dialog...');
                 // Show success
                 try {
@@ -1107,7 +1196,11 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                       ),
                       title: const Row(
                         children: [
-                          Icon(Icons.check_circle, color: Colors.green, size: 32),
+                          Icon(
+                            Icons.check_circle,
+                            color: Colors.green,
+                            size: 32,
+                          ),
                           SizedBox(width: 12),
                           Text(
                             'نجح التصدير',
@@ -1123,7 +1216,10 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                           const SizedBox(height: 12),
                           Text(
                             'المسار: ${result['filePath']}',
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
                           ),
                         ],
                       ),
@@ -1154,7 +1250,9 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                   print('⚠️ Showing snackbar instead');
                   scaffoldMessenger.showSnackBar(
                     SnackBar(
-                      content: Text('تم التصدير والحذف بنجاح: ${result['filePath']}'),
+                      content: Text(
+                        'تم التصدير والحذف بنجاح: ${result['filePath']}',
+                      ),
                       backgroundColor: Colors.green,
                       duration: const Duration(seconds: 5),
                     ),
@@ -1163,7 +1261,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
               } catch (e) {
                 print('❌ Export and clear error: $e');
                 navigator.pop(); // Close loading using saved navigator
-                
+
                 scaffoldMessenger.showSnackBar(
                   SnackBar(
                     content: Text('فشل التصدير: $e'),
@@ -1190,9 +1288,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
             Icon(Icons.check_circle, color: Colors.green, size: 32),
@@ -1237,5 +1333,119 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
       ),
     );
   }
+}
 
+// Delegate for sticky rating header
+class _RatingHeaderDelegate extends SliverPersistentHeaderDelegate {
+  static const List<Map<String, dynamic>> ratingOptions = [
+    {'value': 1, 'text': 'غير راضي اطلاقا'},
+    {'value': 2, 'text': 'غير راضي'},
+    {'value': 3, 'text': 'محايد'},
+    {'value': 4, 'text': 'راضي'},
+    {'value': 5, 'text': 'راضي تماما'},
+    {'value': 6, 'text': 'غير متوفر'},
+  ];
+
+  @override
+  double get minExtent => 130.0;
+
+  @override
+  double get maxExtent => 135.0;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(
+      color: Colors.grey.shade100,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xff25935F).withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: const Color(0xff25935F).withValues(alpha: 0.3),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.star_rate, color: const Color(0xff25935F), size: 18),
+                const SizedBox(width: 6),
+                const Text(
+                  'مقياس التقييم:',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xff25935F),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Horizontal layout for rating options
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: ratingOptions.map((option) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xff25935F).withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: const Color(0xff25935F),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${option['value']}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        option['text'],
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(_RatingHeaderDelegate oldDelegate) => false;
 }

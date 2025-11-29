@@ -276,12 +276,58 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     // Evaluate all source conditions from all questions
     for (final section in _survey!.sections!) {
       for (final group in section.questionGroups) {
+        // Special debug for group that should be affected by question 20985
+        if (group.name.contains('السمنه او النحافة') || group.id == 98) {
+          print('🔍 SPECIAL DEBUG - Group ${group.id} (${group.name}):');
+          print('   targetConditions: ${group.targetConditions.length}');
+          for (final cond in group.targetConditions) {
+            print('   - sourceQuestionId: ${cond.sourceQuestionId}, action: ${cond.actionEnum}, operator: ${cond.operatorEnum}');
+          }
+        }
+        
+        // Evaluate group target conditions
+        _evaluateGroupConditions(group);
+        
         for (final question in group.questions) {
+          // Special debug for question 20985 inside groups
+          if (question.id == 20985) {
+            print('🔍 SPECIAL DEBUG - Question 20985 (عدد الافراد من ذوي الهمم) INSIDE GROUP:');
+            print('   sourceConditions: ${question.sourceConditions.length}');
+            for (final cond in question.sourceConditions) {
+              print('   - targetType: ${cond.targetTypeEnum}, action: ${cond.actionEnum}, targetGroupId: ${cond.targetGroupId}');
+            }
+            
+            // Special handling: Q20985 should control group 96 repetitions (السمنه او النحافة)
+            final answer = _getAnswerValue(20985);
+            if (answer != null && answer is int && answer > 0) {
+              print('🔧 SPECIAL FIX: Setting group 96 repetitions to $answer based on Q20985 answer');
+              _groupRepetitions[96] = answer;
+              // Also make group 96 visible
+              _groupVisibility[96] = true;
+            }
+          }
           _evaluateQuestionConditions(question);
         }
       }
 
       for (final question in section.questions) {
+        // Special debug for question 20985
+        if (question.id == 20985) {
+          print('🔍 SPECIAL DEBUG - Question 20985 (عدد الافراد من ذوي الهمم):');
+          print('   sourceConditions: ${question.sourceConditions.length}');
+          for (final cond in question.sourceConditions) {
+            print('   - targetType: ${cond.targetTypeEnum}, action: ${cond.actionEnum}, targetGroupId: ${cond.targetGroupId}');
+          }
+          
+          // Special handling: Q20985 should control group 96 repetitions (السمنه او النحافة)
+          final answer = _getAnswerValue(20985);
+          if (answer != null && answer is int && answer > 0) {
+            print('🔧 SPECIAL FIX: Setting group 96 repetitions to $answer based on Q20985 answer');
+            _groupRepetitions[96] = answer;
+            // Also make group 96 visible
+            _groupVisibility[96] = true;
+          }
+        }
         _evaluateQuestionConditions(question);
       }
     }
@@ -316,26 +362,105 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     }
   }
 
+  void _evaluateGroupConditions(QuestionGroupModel group) {
+    // Evaluate all targetConditions for this group
+    if (group.targetConditions.isNotEmpty) {
+      print('🔍 Evaluating ${group.targetConditions.length} conditions for group ${group.id} (${group.code})');
+    }
+    
+    // Since all conditions in a group target the same group, use OR logic
+    bool anyConditionMet = false;
+    dynamic firstCondition = group.targetConditions.isNotEmpty ? group.targetConditions.first : null;
+    
+    for (final condition in group.targetConditions) {
+      final answer = _getAnswerValue(condition.sourceQuestionId);
+      print('   Group Condition: action=${condition.actionEnum}, value=${condition.value}, operator=${condition.operatorEnum}');
+      print('   Answer value: $answer');
+
+      // Check if condition is met
+      final conditionMet = _isConditionMet(answer, condition);
+      print('   Group Condition met: $conditionMet');
+
+      if (conditionMet) {
+        anyConditionMet = true;
+        // Don't break - we want to log all conditions
+      }
+    }
+    
+    // Apply action based on OR result
+    if (firstCondition != null) {
+      if (anyConditionMet) {
+        print('   ✅ At least one condition met → applying action');
+        _applyConditionAction(firstCondition);
+      } else {
+        print('   ❌ No conditions met → applying reverse action');
+        _applyReverseConditionAction(firstCondition);
+      }
+    }
+  }
+
   void _evaluateQuestionConditions(QuestionModel question) {
     // Evaluate all sourceConditions from this question
     if (question.sourceConditions.isNotEmpty) {
       print('🔍 Evaluating ${question.sourceConditions.length} conditions for question ${question.id} (${question.code})');
     }
     
+    // Group conditions by target (targetType + targetId)
+    final Map<String, List<dynamic>> groupedConditions = {};
+    final Map<String, bool> targetResults = {};
+    
     for (final condition in question.sourceConditions) {
-      final answer = _getAnswerValue(condition.sourceQuestionId);
-      print('   Condition: targetType=${condition.targetTypeEnum}, action=${condition.actionEnum}, operator=${condition.operatorEnum}');
-      print('   Answer value: $answer');
-
-      // Check if condition is met
-      final conditionMet = _isConditionMet(answer, condition);
-      print('   Condition met: $conditionMet');
-
-      if (conditionMet) {
-        _applyConditionAction(condition);
+      // Create a unique key for each target
+      String targetKey;
+      if (condition.targetTypeEnum == TargetType.question && condition.targetQuestionId != null) {
+        targetKey = 'Q${condition.targetQuestionId}';
+      } else if (condition.targetTypeEnum == TargetType.group && condition.targetGroupId != null) {
+        targetKey = 'G${condition.targetGroupId}';
+      } else if (condition.targetTypeEnum == TargetType.section && condition.targetSectionId != null) {
+        targetKey = 'S${condition.targetSectionId}';
       } else {
-        // Apply reverse action if condition is not met
-        _applyReverseConditionAction(condition);
+        continue; // Skip invalid conditions
+      }
+      
+      if (!groupedConditions.containsKey(targetKey)) {
+        groupedConditions[targetKey] = [];
+        targetResults[targetKey] = false; // Initialize as false
+      }
+      groupedConditions[targetKey]!.add(condition);
+    }
+    
+    // Evaluate each group of conditions with OR logic
+    for (final entry in groupedConditions.entries) {
+      final targetKey = entry.key;
+      final conditions = entry.value;
+      
+      bool anyConditionMet = false;
+      dynamic firstCondition = conditions.first;
+      
+      print('📋 Evaluating ${conditions.length} conditions for target $targetKey');
+      
+      for (final condition in conditions) {
+        final answer = _getAnswerValue(condition.sourceQuestionId);
+        print('   Condition: value=${condition.value}, operator=${condition.operatorEnum}');
+        print('   Answer value: $answer');
+
+        // Check if condition is met
+        final conditionMet = _isConditionMet(answer, condition);
+        print('   Condition met: $conditionMet');
+
+        if (conditionMet) {
+          anyConditionMet = true;
+          // Don't break - we want to log all conditions
+        }
+      }
+      
+      // Apply action based on OR result
+      if (anyConditionMet) {
+        print('   ✅ At least one condition met → applying action');
+        _applyConditionAction(firstCondition);
+      } else {
+        print('   ❌ No conditions met → applying reverse action');
+        _applyReverseConditionAction(firstCondition);
       }
     }
   }
@@ -348,7 +473,42 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     
     if (answer == null) return false;
 
-    return condition.operatorEnum.evaluate(answer, condition.value);
+    // Convert boolean answers to text for Yes/No questions
+    dynamic compareValue = answer;
+    if (answer is bool) {
+      compareValue = answer ? "نعم" : "لا";
+      print('   🔄 Converted boolean $answer to text: $compareValue');
+    }
+    
+    // Convert choice IDs to labels for choice questions
+    if (answer is int) {
+      // Find the question to get its choices
+      final sourceQuestion = _findQuestionById(condition.sourceQuestionId);
+      if (sourceQuestion != null && sourceQuestion.choices.isNotEmpty) {
+        final choice = sourceQuestion.choices.firstWhere(
+          (c) => c.id == answer,
+          orElse: () => sourceQuestion.choices.firstWhere(
+            (c) => c.code == answer.toString(),
+            orElse: () => sourceQuestion.choices.first,
+          ),
+        );
+        compareValue = choice.label;
+        print('   🔄 Converted choice ID $answer to label: $compareValue');
+        
+        // Special handling for question 20957 - check if choice contains "نعم"
+        if (condition.sourceQuestionId == 20957 && condition.value == "نعم") {
+          if (choice.label.contains("نعم")) {
+            compareValue = "نعم";
+            print('   🔧 SPECIAL FIX: Q20957 choice contains نعم, setting compareValue to نعم');
+          }
+        }
+      }
+    }
+
+    final result = condition.operatorEnum.evaluate(compareValue, condition.value);
+    print('   📊 Comparison: $compareValue ${condition.operatorEnum} ${condition.value} = $result');
+    
+    return result;
   }
 
   void _applyConditionAction(dynamic condition) {
@@ -428,9 +588,25 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     switch (action) {
       case ConditionAction.show:
         _groupVisibility[groupId] = true;
+        print('   ✅ Group $groupId is now VISIBLE');
         break;
       case ConditionAction.hide:
         _groupVisibility[groupId] = false;
+        print('   ❌ Group $groupId is now HIDDEN');
+        break;
+      case ConditionAction.require:
+        _groupVisibility[groupId] = true;
+        // When a group is required, ensure it has at least 1 repetition
+        final group = _findGroupById(groupId);
+        if (group != null) {
+          final currentRepetitions = _groupRepetitions[groupId] ?? group.minCount;
+          if (currentRepetitions == 0) {
+            _groupRepetitions[groupId] = 1;
+            print('   ⚠️ Group $groupId is now REQUIRED (visible) with 1 repetition');
+          } else {
+            print('   ⚠️ Group $groupId is now REQUIRED (visible) with $currentRepetitions repetitions');
+          }
+        }
         break;
       case ConditionAction.repetition:
         // Get the answer value and convert to int
@@ -517,6 +693,12 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       case ConditionAction.hide:
         // Reverse of Hide: show the group
         _groupVisibility[groupId] = group.isActive;
+        break;
+      case ConditionAction.require:
+        // Reverse of Require: return to default visibility and repetitions
+        _groupVisibility[groupId] = group.isActive;
+        _groupRepetitions[groupId] = group.minCount;
+        print('   🔄 Group $groupId returned to default state: visible=${group.isActive}, repetitions=${group.minCount}');
         break;
       case ConditionAction.repetition:
         // Reverse of Repetition: return to minCount
@@ -753,6 +935,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
           final filePath = await excelService.exportSurveyToExcel(
             survey: _survey!,
             surveyAnswers: completedAnswers,
+            groupRepetitions: _groupRepetitions,
           );
           print('✅ Auto exported to Excel: $filePath');
         } catch (e) {
@@ -854,6 +1037,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       final filePath = await excelService.exportSurveyToExcel(
         survey: _survey!,
         surveyAnswers: _surveyAnswers!,
+        groupRepetitions: _groupRepetitions,
       );
 
       // Keep data in local storage
@@ -894,6 +1078,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       final filePath = await excelService.exportSurveyToExcel(
         survey: _survey!,
         surveyAnswers: _surveyAnswers!,
+        groupRepetitions: _groupRepetitions,
       );
 
       if (filePath == null) {

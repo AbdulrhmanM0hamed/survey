@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:syncfusion_flutter_xlsio/xlsio.dart';
+import 'package:survey/core/enums/question_type.dart';
 import 'package:survey/data/models/answer_model.dart';
 import 'package:survey/data/models/question_model.dart';
 import 'package:survey/data/models/survey_model.dart';
@@ -23,6 +24,7 @@ class ExcelExportServiceSyncfusion {
   Future<String?> exportSurveyToExcel({
     required SurveyModel survey,
     required SurveyAnswersModel surveyAnswers,
+    Map<int, int>? groupRepetitions,
   }) async {
     print('📊 Starting Syncfusion Excel export with images...');
     try {
@@ -47,8 +49,14 @@ class ExcelExportServiceSyncfusion {
       print('📁 Using file: $fileName');
       print('📍 Full path: $filePath');
 
+      // Debug: Log all saved answers
+      print('📋 All saved answers (${surveyAnswers.answers.length} total):');
+      for (final answer in surveyAnswers.answers) {
+        print('   Q${answer.questionId} (${answer.questionCode}): ${answer.value} (${answer.value.runtimeType})');
+      }
+
       // Build header structure
-      _buildHeaderStructure(survey, surveyAnswers);
+      _buildHeaderStructure(survey, surveyAnswers, groupRepetitions);
 
       // Step 1: Read existing data if file exists (using excel package)
       List<List<dynamic>> existingData = []; // Store cell values and image info
@@ -172,9 +180,9 @@ class ExcelExportServiceSyncfusion {
   }
 
   /// Build header structure from survey
-  void _buildHeaderStructure(SurveyModel survey, SurveyAnswersModel surveyAnswers) {
+  void _buildHeaderStructure(SurveyModel survey, SurveyAnswersModel surveyAnswers, Map<int, int>? groupRepetitions) {
     _headerStructure = [];
-    _buildHeaderStructureInternal(survey, surveyAnswers, _headerStructure);
+    _buildHeaderStructureInternal(survey, surveyAnswers, _headerStructure, groupRepetitions);
   }
 
   /// Internal method to build header structure
@@ -182,6 +190,7 @@ class ExcelExportServiceSyncfusion {
     SurveyModel survey,
     SurveyAnswersModel surveyAnswers,
     List<Map<String, dynamic>> structure,
+    Map<int, int>? groupRepetitions,
   ) {
     // Basic info columns
     structure.addAll([
@@ -206,7 +215,9 @@ class ExcelExportServiceSyncfusion {
     for (final section in survey.sections ?? []) {
       // Add groups
       for (final group in section.questionGroups) {
-        final maxRepetitions = _getMaxRepetitions(group.id, surveyAnswers);
+        // Use groupRepetitions if provided, otherwise fall back to _getMaxRepetitions
+        final maxRepetitions = groupRepetitions?[group.id] ?? _getMaxRepetitions(group.id, surveyAnswers);
+        print('📊 Group ${group.id} (${group.name}): using $maxRepetitions repetitions');
         
         for (int i = 0; i < maxRepetitions; i++) {
           for (final question in group.questions) {
@@ -226,6 +237,7 @@ class ExcelExportServiceSyncfusion {
         ..sort((a, b) => a.order.compareTo(b.order));
       
       for (final question in sortedDirectQuestions) {
+        print('📋 Adding direct question to header: ${question.id} - ${question.code} - ${question.text.substring(0, question.text.length > 30 ? 30 : question.text.length)}...');
         structure.add({
           'type': 'direct',
           'text': question.code,
@@ -240,10 +252,18 @@ class ExcelExportServiceSyncfusion {
   /// Get maximum repetitions for a group
   int _getMaxRepetitions(int groupId, SurveyAnswersModel surveyAnswers) {
     final groupAnswers = surveyAnswers.answers.where((a) => a.groupId == groupId).toList();
-    if (groupAnswers.isEmpty) return 1;
+    if (groupAnswers.isEmpty) {
+      // For groups with no answers, check if there are any repetitions set in the system
+      // This should be coordinated with the ViewModel's _groupRepetitions
+      // For now, return 0 for groups that have no saved answers
+      print('📊 Group $groupId has no saved answers, returning 0 repetitions');
+      return 0;
+    }
     
     final maxInstance = groupAnswers.map((a) => a.groupInstanceId ?? 0).reduce((a, b) => a > b ? a : b);
-    return maxInstance + 1;
+    final result = maxInstance + 1;
+    print('📊 Group $groupId has $result repetitions based on saved answers');
+    return result;
   }
 
   /// Find question by ID in survey
@@ -264,6 +284,37 @@ class ExcelExportServiceSyncfusion {
   /// Format answer value for display
   String _formatAnswerValue(dynamic value, QuestionModel? question) {
     if (value == null) return '';
+    
+    // Handle rating questions (type 6) - convert numbers to Arabic text
+    if (question != null && question.questionType == QuestionType.rating) {
+      final ratingMap = {
+        1: 'غير راضي اطلاقا',
+        2: 'غير راضي',
+        3: 'محايد',
+        4: 'راضي',
+        5: 'راضي تماما',
+        6: 'غير متوفر',
+      };
+      
+      if (value is int && ratingMap.containsKey(value)) {
+        return ratingMap[value]!;
+      } else if (value is String) {
+        final intValue = int.tryParse(value);
+        if (intValue != null && ratingMap.containsKey(intValue)) {
+          return ratingMap[intValue]!;
+        }
+      }
+    }
+    
+    // Handle Yes/No questions (type 3) - convert boolean to Arabic text
+    if (question != null && question.questionType == QuestionType.yesNo) {
+      if (value is bool) {
+        return value ? 'نعم' : 'لا';
+      } else if (value is String) {
+        if (value.toLowerCase() == 'true') return 'نعم';
+        if (value.toLowerCase() == 'false') return 'لا';
+      }
+    }
     
     if (question != null && question.choices.isNotEmpty) {
       print('🔍 Formatting value: "$value" for question ${question.id}');
@@ -401,6 +452,8 @@ class ExcelExportServiceSyncfusion {
             timestamp: DateTime.now(),
           ),
         );
+        
+        print('🔍 Processing question $questionId (instance: $instanceIndex): answer value = ${answer.value}');
 
         if (answer.value != null && answer.value.toString().isNotEmpty) {
           final question = _findQuestion(survey, questionId);
@@ -497,7 +550,7 @@ class ExcelExportServiceSyncfusion {
 
   /// Add headers to Excel sheet using excel package (OLD - NOT USED)
   void _addHeadersExcel(ExcelPkg.Sheet sheet, SurveyModel survey, SurveyAnswersModel surveyAnswers) {
-    _buildHeaderStructure(survey, surveyAnswers);
+    _buildHeaderStructure(survey, surveyAnswers, null);
     
     for (int i = 0; i < _headerStructure.length; i++) {
       final header = _headerStructure[i];

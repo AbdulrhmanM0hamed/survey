@@ -4,6 +4,7 @@ import 'package:survey/data/models/question_model.dart';
 import 'package:survey/presentation/widgets/question_widgets/choice_question_widget.dart';
 import 'package:survey/presentation/widgets/question_widgets/date_question_widget.dart';
 import 'package:survey/presentation/widgets/question_widgets/image_question_widget.dart';
+import 'package:survey/presentation/widgets/question_widgets/rating_question_widget.dart';
 import 'package:survey/presentation/widgets/question_widgets/text_question_widget.dart';
 import 'package:survey/presentation/widgets/question_widgets/yes_no_question_widget.dart';
 
@@ -157,6 +158,24 @@ class QuestionWidget extends StatelessWidget {
         );
 
       case QuestionType.rating:
+        // Convert initialValue to int for rating
+        int? ratingInitialValue;
+        if (initialValue != null) {
+          if (initialValue is int) {
+            ratingInitialValue = initialValue;
+          } else if (initialValue is String) {
+            ratingInitialValue = int.tryParse(initialValue);
+          }
+        }
+        
+        return RatingQuestionWidget(
+          question: question,
+          initialValue: ratingInitialValue,
+          onChanged: onChanged,
+          isRequired: isRequired,
+          showHeader: true, // Show header for individual rating questions
+        );
+
       case QuestionType.duration:
         // For now, use text widget - can be enhanced later
         return TextQuestionWidget(
