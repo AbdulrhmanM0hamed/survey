@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:survey/data/models/answer_model.dart';
+import 'package:survey/data/models/answer_model.dart'; // Contains both AnswerModel and SurveyAnswersModel
 
 abstract class QuestionnaireRemoteDataSource {
   Future<bool> submitQuestionnaire(Map<String, dynamic> questionnaireData);
@@ -152,8 +152,22 @@ class QuestionnaireRemoteDataSourceImpl implements QuestionnaireRemoteDataSource
           ? answer.value 
           : num.tryParse(answer.value.toString()) ?? 0;
     } else if (qType == 3) {
-      // YesNo
-      answerMap["valueCode"] = answer.value.toString();
+      // YesNo - now stores choiceId like SingleChoice
+      if (answer.value is int) {
+        answerMap["selectedChoices"] = [{
+          "choiceId": answer.value,
+          "otherText": null
+        }];
+      } else if (answer.value is bool) {
+        // Legacy support: convert bool to text (should not happen with new code)
+        final bool yesNo = answer.value as bool;
+        answerMap["valueCode"] = yesNo ? "نعم" : "لا";
+        print('⚠️ WARNING: YesNo question ${answer.questionId} has legacy bool value instead of choiceId');
+      } else {
+        // Unknown format
+        answerMap["valueCode"] = answer.value.toString();
+        print('⚠️ WARNING: YesNo question ${answer.questionId} has unexpected value type: ${answer.value.runtimeType}');
+      }
     } else if (qType == 4 || qType == 5) {
       // SingleChoice, MultiChoice
       if (answer.value is List) {

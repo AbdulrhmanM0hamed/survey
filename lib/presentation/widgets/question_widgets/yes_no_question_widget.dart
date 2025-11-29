@@ -3,8 +3,8 @@ import 'package:survey/data/models/question_model.dart';
 
 class YesNoQuestionWidget extends StatefulWidget {
   final QuestionModel question;
-  final bool? initialValue;
-  final Function(bool) onChanged;
+  final dynamic initialValue; // Changed from bool? to dynamic (can be bool or int choiceId)
+  final Function(int) onChanged; // Changed from bool to int (choiceId)
   final bool isRequired;
 
   const YesNoQuestionWidget({
@@ -20,12 +20,23 @@ class YesNoQuestionWidget extends StatefulWidget {
 }
 
 class _YesNoQuestionWidgetState extends State<YesNoQuestionWidget> {
-  bool? _selectedValue;
+  int? _selectedChoiceId; // Changed to store choiceId instead of bool
 
   @override
   void initState() {
     super.initState();
-    _selectedValue = widget.initialValue;
+    // Convert initial value to choiceId if needed
+    if (widget.initialValue is int) {
+      _selectedChoiceId = widget.initialValue as int;
+    } else if (widget.initialValue is bool) {
+      // Legacy: convert bool to choiceId using question choices
+      final bool value = widget.initialValue as bool;
+      if (widget.question.choices.length >= 2) {
+        _selectedChoiceId = value 
+            ? widget.question.choices[0].id  // true = "نعم" (first choice)
+            : widget.question.choices[1].id; // false = "لا" (second choice)
+      }
+    }
   }
 
   @override
@@ -51,7 +62,7 @@ class _YesNoQuestionWidgetState extends State<YesNoQuestionWidget> {
                 margin: const EdgeInsets.only(right: 8),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _selectedValue != null 
+                  color: _selectedChoiceId != null 
                       ? Colors.green 
                       : Colors.red,
                 ),
@@ -61,21 +72,23 @@ class _YesNoQuestionWidgetState extends State<YesNoQuestionWidget> {
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(
-              child: _buildOptionButton(
-                label: 'نعم',
-                value: true,
-                icon: Icons.check_circle_outline,
+            if (widget.question.choices.length >= 2) ...[
+              Expanded(
+                child: _buildOptionButton(
+                  label: widget.question.choices[0].label, // "نعم"
+                  choiceId: widget.question.choices[0].id,
+                  icon: Icons.check_circle_outline,
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildOptionButton(
-                label: 'لا',
-                value: false,
-                icon: Icons.cancel_outlined,
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildOptionButton(
+                  label: widget.question.choices[1].label, // "لا"
+                  choiceId: widget.question.choices[1].id,
+                  icon: Icons.cancel_outlined,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ],
@@ -84,16 +97,16 @@ class _YesNoQuestionWidgetState extends State<YesNoQuestionWidget> {
 
   Widget _buildOptionButton({
     required String label,
-    required bool value,
+    required int choiceId,
     required IconData icon,
   }) {
-    final isSelected = _selectedValue == value;
+    final isSelected = _selectedChoiceId == choiceId;
 
     return InkWell(
       onTap: () {
         setState(() {
-          _selectedValue = value;
-          widget.onChanged(value);
+          _selectedChoiceId = choiceId;
+          widget.onChanged(choiceId);
         });
       },
       borderRadius: BorderRadius.circular(12),

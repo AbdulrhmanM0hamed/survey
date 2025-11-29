@@ -116,8 +116,8 @@ class QuestionWidget extends StatelessWidget {
       case QuestionType.yesNo:
         return YesNoQuestionWidget(
           question: question,
-          initialValue: initialValue as bool?,
-          onChanged: onChanged,
+          initialValue: initialValue, // Can be int (choiceId) or bool (legacy)
+          onChanged: onChanged, // Receives int (choiceId)
           isRequired: isRequired,
         );
 
