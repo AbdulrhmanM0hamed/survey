@@ -116,9 +116,14 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade100,
-      appBar: AppBar(
+    return GestureDetector(
+      onTap: () {
+        // Dismiss keyboard when tapping outside TextFields
+        FocusScope.of(context).unfocus();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.grey.shade100,
+        appBar: AppBar(
         elevation: 0,
         backgroundColor: Color(0xff25935F),
         leading: IconButton(
@@ -419,6 +424,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           );
         },
       ),
+      ), // Close GestureDetector
     );
   }
 
@@ -477,92 +483,121 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
         ),
         const SizedBox(height: 20),
 
-        // Question Groups
-        ...viewModel.getVisibleGroups(section).map((group) {
-          return _buildQuestionGroup(group, viewModel);
-        }),
-
-        // Direct questions (not in groups)
-        ...viewModel
-            .getVisibleQuestions(section: section)
-            .map((question) {
-          // Find answer for this question
-          AnswerModel? answer;
-          try {
-            answer = viewModel.surveyAnswers?.answers.firstWhere(
-              (a) => a.questionId == question.id,
-            );
-          } catch (e) {
-            answer = null;
+        // Display questions and their related groups together
+        ...() {
+          final groups = viewModel.getVisibleGroups(section);
+          final questions = viewModel.getVisibleQuestions(section: section);
+          final List<Widget> widgets = [];
+          
+          // Create a map of source question ID to group for quick lookup
+          final Map<int, QuestionGroupModel> sourceQuestionToGroup = {};
+          for (var group in groups) {
+            for (var condition in group.targetConditions) {
+              sourceQuestionToGroup[condition.sourceQuestionId] = group;
+            }
           }
+          
+          // Process each question and add its related group immediately after
+          for (var question in questions) {
+            // Add the question
+            widgets.add(_buildDirectQuestion(question, viewModel));
+            
+            // Check if this question has a related group
+            final relatedGroup = sourceQuestionToGroup[question.id];
+            if (relatedGroup != null) {
+              // Add the related group immediately after the question
+              widgets.add(_buildQuestionGroup(relatedGroup, viewModel));
+              // Remove from groups list to avoid duplicating
+              groups.remove(relatedGroup);
+            }
+          }
+          
+          // Add any remaining groups that weren't linked to questions
+          for (var group in groups) {
+            widgets.add(_buildQuestionGroup(group, viewModel));
+          }
+          
+          return widgets;
+        }(),
+      ],
+    );
+  }
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              QuestionWidget(
-                question: question,
-                initialValue: answer?.value,
-                onChanged: (value) async {
-                  try {
-                    print('🔴 Direct Question callback: questionId=${question.id}, code=${question.code}, value=$value');
-                    print('   Calling viewModel.saveAnswer...');
-                    await viewModel.saveAnswer(
-                      questionId: question.id,
-                      questionCode: question.code,
-                      value: value,
-                    );
-                    print('   saveAnswer completed successfully');
-                  } catch (e, stackTrace) {
-                    print('❌ ERROR in saveAnswer: $e');
-                    print('   StackTrace: $stackTrace');
-                  }
-                },
-                isRequired: viewModel.isQuestionRequired(question.id),
-              ),
-              // Debug info for HH_MEMBERS_COUNT
-              if (question.code == 'HH_MEMBERS_COUNT') ...[
-                Container(
-                  margin: const EdgeInsets.only(top: 8),
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.red.shade300),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Text(
-                      //   '🐛 DEBUG INFO:',
-                      //   style: TextStyle(
-                      //     fontSize: 12,
-                      //     color: Colors.red.shade900,
-                      //     fontWeight: FontWeight.bold,
-                      //   ),
-                      // ),
-                      // Text(
-                      //   'Question ID: ${question.id}',
-                      //   style: TextStyle(fontSize: 11, color: Colors.red.shade800),
-                      // ),
-                      // Text(
-                      //   'Question Type: ${question.questionType}',
-                      //   style: TextStyle(fontSize: 11, color: Colors.red.shade800),
-                      // ),
-                      // Text(
-                      //   'Saved answer: ${answer?.value} (${answer?.value.runtimeType})',
-                      //   style: TextStyle(fontSize: 11, color: Colors.red.shade800),
-                      // ),
-                      // Text(
-                      //   'Source Conditions: ${question.sourceConditions.length}',
-                      //   style: TextStyle(fontSize: 11, color: Colors.red.shade800),
-                      // ),
-                    ],
-                  ),
-                ),
+  Widget _buildDirectQuestion(question, viewModel) {
+    // Find answer for this question
+    AnswerModel? answer;
+    try {
+      answer = viewModel.surveyAnswers?.answers.firstWhere(
+        (a) => a.questionId == question.id,
+      );
+    } catch (e) {
+      answer = null;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        QuestionWidget(
+          question: question,
+          initialValue: answer?.value,
+          onChanged: (value) async {
+            try {
+              print('🔴 Direct Question callback: questionId=${question.id}, code=${question.code}, value=$value');
+              print('   Calling viewModel.saveAnswer...');
+              await viewModel.saveAnswer(
+                questionId: question.id,
+                questionCode: question.code,
+                value: value,
+              );
+              print('   saveAnswer completed successfully');
+            } catch (e, stackTrace) {
+              print('❌ ERROR in saveAnswer: $e');
+              print('   StackTrace: $stackTrace');
+            }
+          },
+          isRequired: viewModel.isQuestionRequired(question.id),
+        ),
+        // Debug info for HH_MEMBERS_COUNT
+        if (question.code == 'HH_MEMBERS_COUNT') ...[
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.red.shade100,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.red.shade300),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Text(
+                //   '🐛 DEBUG INFO:',
+                //   style: TextStyle(
+                //     fontSize: 12,
+                //     color: Colors.red.shade900,
+                //     fontWeight: FontWeight.bold,
+                //   ),
+                // ),
+                // Text(
+                //   'Question ID: ${question.id}',
+                //   style: TextStyle(fontSize: 11, color: Colors.red.shade800),
+                // ),
+                // Text(
+                //   'Question Type: ${question.questionType}',
+                //   style: TextStyle(fontSize: 11, color: Colors.red.shade800),
+                // ),
+                // Text(
+                //   'Saved answer: ${answer?.value} (${answer?.value.runtimeType})',
+                //   style: TextStyle(fontSize: 11, color: Colors.red.shade800),
+                // ),
+                // Text(
+                //   'Source Conditions: ${question.sourceConditions.length}',
+                //   style: TextStyle(fontSize: 11, color: Colors.red.shade800),
+                // ),
               ],
-            ],
-          );
-        }),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -578,45 +613,45 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (group.name.isNotEmpty) ...[
-          Container(
-            padding: const EdgeInsets.all(16),
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: Color(0xff25935F).withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Color(0xff25935F).withValues(alpha: 0.2)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.group_work, color: Color(0xff25935F).withValues(alpha: 0.7)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        group.name,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xff25935F).withValues(alpha: 0.9),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                // Text(
-                //   '🔄 DEBUG: Group ID ${group.id}, Repetitions: $repetitions',
-                //   style: TextStyle(
-                //     fontSize: 12,
-                //     color: Colors.red.shade700,
-                //     fontWeight: FontWeight.bold,
-                //   ),
-                // ),
-              ],
-            ),
-          ),
+          // Container(
+          //   padding: const EdgeInsets.all(16),
+          //   margin: const EdgeInsets.only(bottom: 12),
+          //   decoration: BoxDecoration(
+          //     color: Color(0xff25935F).withValues(alpha: 0.05),
+          //     borderRadius: BorderRadius.circular(12),
+          //     border: Border.all(color: Color(0xff25935F).withValues(alpha: 0.2)),
+          //   ),
+          //   child: Column(
+          //     crossAxisAlignment: CrossAxisAlignment.start,
+          //     children: [
+          //       Row(
+          //         children: [
+          //           Icon(Icons.group_work, color: Color(0xff25935F).withValues(alpha: 0.7)),
+          //           const SizedBox(width: 12),
+          //           Expanded(
+          //             child: Text(
+          //               group.name,
+          //               style: TextStyle(
+          //                 fontSize: 18,
+          //                 fontWeight: FontWeight.w600,
+          //                 color: Color(0xff25935F).withValues(alpha: 0.9),
+          //               ),
+          //             ),
+          //           ),
+          //         ],
+          //       ),
+          //       const SizedBox(height: 8),
+          //       // Text(
+          //       //   '🔄 DEBUG: Group ID ${group.id}, Repetitions: $repetitions',
+          //       //   style: TextStyle(
+          //       //     fontSize: 12,
+          //       //     color: Colors.red.shade700,
+          //       //     fontWeight: FontWeight.bold,
+          //       //   ),
+          //       // ),
+          //     ],
+          //   ),
+          // ),
         ],
         ...List.generate(repetitions, (instanceIndex) {
           print('   📝 Generating instance $instanceIndex for group ${group.id}');
@@ -1202,4 +1237,5 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
       ),
     );
   }
+
 }

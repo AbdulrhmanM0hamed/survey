@@ -501,6 +501,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
             const SizedBox(height: 12),
             DropdownButtonFormField<ManagementInformationModel>(
               value: selectedValue,
+              isExpanded: true,
               decoration: InputDecoration(
                 hintText: ' $title',
                 border: OutlineInputBorder(
@@ -526,7 +527,14 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 ),
               ),
               items: items.map((item) {
-                return DropdownMenuItem(value: item, child: Text(item.name));
+                return DropdownMenuItem(
+                  value: item,
+                  child: Text(
+                    item.name,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                );
               }).toList(),
               onChanged: onChanged,
               validator: validator,
