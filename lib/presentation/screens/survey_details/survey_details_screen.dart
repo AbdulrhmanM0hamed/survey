@@ -157,6 +157,8 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                       await _showExportDialog(context, viewModel);
                     } else if (value == 'export_clear') {
                       await _showExportAndClearDialog(context, viewModel);
+                    } else if (value == 'clear_form') {
+                      await _showClearFormDialog(context, viewModel);
                     }
                   },
                   itemBuilder: (context) => [
@@ -167,6 +169,16 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                           Icon(Icons.file_download, color: Colors.green),
                           SizedBox(width: 12),
                           Text('تصدير إلى Excel'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'clear_form',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_sweep, color: Colors.orange),
+                          SizedBox(width: 12),
+                          Text('مسح الإجابات'),
                         ],
                       ),
                     ),
@@ -1270,6 +1282,61 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                 );
               }
             },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showClearFormDialog(
+    BuildContext context,
+    SurveyDetailsViewModel viewModel,
+  ) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_sweep, color: Colors.orange),
+            SizedBox(width: 12),
+            Text(
+              'مسح الإجابات',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: const Text(
+          'سيتم مسح جميع الإجابات من الحقول. سيتم الاحتفاظ بالبيانات المحفوظة في التخزين المحلي.\n\nهل تريد المتابعة؟',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              
+              // Clear form answers
+              viewModel.clearFormAnswers();
+              
+              // Show success message
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('تم مسح جميع الإجابات بنجاح'),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            icon: const Icon(Icons.delete_sweep),
+            label: const Text('مسح'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
               foregroundColor: Colors.white,

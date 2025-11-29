@@ -1280,4 +1280,25 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       return null;
     }
   }
+
+  /// Clear all answers from memory (does NOT delete from local storage)
+  /// This resets the form to empty state
+  void clearFormAnswers() {
+    print('🗑️ Clearing all form answers from memory...');
+    
+    if (_surveyAnswers != null) {
+      // Clear the answers list
+      _surveyAnswers!.answers.clear();
+      print('✅ Cleared ${_surveyAnswers!.answers.length} answers');
+      
+      // Reset visibility and conditions to initial state
+      if (_survey != null) {
+        _initializeVisibilityAndRequirements();
+        _evaluateAllConditions();
+      }
+      
+      notifyListeners();
+      print('✅ Form answers cleared successfully');
+    }
+  }
 }
