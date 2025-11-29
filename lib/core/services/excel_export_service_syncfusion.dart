@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:survey/data/models/question_group_model.dart';
 import 'package:syncfusion_flutter_xlsio/xlsio.dart';
 import 'package:survey/core/enums/question_type.dart';
 import 'package:survey/data/models/answer_model.dart';
@@ -55,53 +56,69 @@ class ExcelExportServiceSyncfusion {
         print('   Q${answer.questionId} (${answer.questionCode}): ${answer.value} (${answer.value.runtimeType})');
       }
 
-      // Build header structure
+      // Build header structure FIRST
       _buildHeaderStructure(survey, surveyAnswers, groupRepetitions);
 
       // Step 1: Read existing data if file exists (using excel package)
-      List<List<dynamic>> existingData = []; // Store cell values and image info
+      // Store as Map (header text -> value) to handle header changes correctly
+      List<Map<String, String>> existingData = []; // Store as header->value maps
+      List<String> oldHeaders = [];
       Map<String, String> imageMap = {}; // Map of "row_col" -> base64
       
       if (await file.exists()) {
-        print('📂 File exists, reading old data...');
+        print('📂 File exists, reading old data with old header structure...');
         try {
           final bytes = await file.readAsBytes();
           final excel = ExcelPkg.Excel.decodeBytes(bytes);
           final sheet = excel.sheets[excel.getDefaultSheet()];
           
-          if (sheet != null && sheet.maxRows > 1) {
-            // Skip header row, read data rows
-            for (int i = 1; i < sheet.maxRows; i++) {
-              List<dynamic> row = [];
-              for (int j = 0; j < _headerStructure.length; j++) {
-                final cell = sheet.cell(ExcelPkg.CellIndex.indexByColumnRow(columnIndex: j, rowIndex: i));
-                final cellValue = cell.value?.toString() ?? '';
-                row.add(cellValue);
-                
-                // Check if this cell should contain an image (based on header structure)
-                final header = _headerStructure[j];
-                if (header['type'] != 'basic') {
-                  final questionId = header['questionId'];
-                  final question = _findQuestion(survey, questionId);
+          if (sheet != null && sheet.maxRows > 0) {
+            // First, read old headers
+            for (int j = 0; j < 500; j++) { // Max 500 columns
+              final cell = sheet.cell(ExcelPkg.CellIndex.indexByColumnRow(columnIndex: j, rowIndex: 0));
+              final headerValue = cell.value?.toString() ?? '';
+              if (headerValue.isEmpty) break;
+              oldHeaders.add(headerValue);
+            }
+            print('📊 Old file has ${oldHeaders.length} columns');
+            
+            // Read data rows mapped by old headers
+            if (sheet.maxRows > 1) {
+              for (int i = 1; i < sheet.maxRows; i++) {
+                Map<String, String> rowData = {};
+                for (int j = 0; j < oldHeaders.length; j++) {
+                  final cell = sheet.cell(ExcelPkg.CellIndex.indexByColumnRow(columnIndex: j, rowIndex: i));
+                  final cellValue = cell.value?.toString() ?? '';
+                  rowData[oldHeaders[j]] = cellValue;
                   
-                  if (question != null && (question.type == 'image' || question.type == '9' || question.type == 9)) {
-                    // This is an image column - try to load image from saved files
-                    final instanceIndex = header['instanceIndex'] ?? 0;
-                    final imagePath = '${directory.path}/survey_${survey.id}_images/Q${questionId}_${instanceIndex}_row${i}.jpg';
-                    final imageFile = File(imagePath);
-                    
-                    if (await imageFile.exists()) {
-                      final imageBytes = await imageFile.readAsBytes();
-                      final base64Image = base64Encode(imageBytes);
-                      imageMap['${i + 1}_${j + 1}'] = base64Image; // Store for re-insertion (row is i+1 because we skip header)
-                      print('📸 Found saved image: $imagePath');
+                  // Check if this is an image column - match by header structure
+                  final newHeaderIndex = _findHeaderIndexByText(oldHeaders[j]);
+                  if (newHeaderIndex >= 0 && newHeaderIndex < _headerStructure.length) {
+                    final header = _headerStructure[newHeaderIndex];
+                    if (header['type'] != 'basic') {
+                      final questionId = header['questionId'];
+                      final question = _findQuestion(survey, questionId);
+                      
+                      if (question != null && (question.type == 'image' || question.type == '9' || question.type == 9)) {
+                        final instanceIndex = header['instanceIndex'] ?? 0;
+                        final imagePath = '${directory.path}/survey_${survey.id}_images/Q${questionId}_${instanceIndex}_row${i}.jpg';
+                        final imageFile = File(imagePath);
+                        
+                        if (await imageFile.exists()) {
+                          final imageBytes = await imageFile.readAsBytes();
+                          final base64Image = base64Encode(imageBytes);
+                          // Map to new column position
+                          imageMap['${existingData.length + 2}_${newHeaderIndex + 1}'] = base64Image;
+                          print('📸 Found saved image: $imagePath');
+                        }
+                      }
                     }
                   }
                 }
+                existingData.add(rowData);
               }
-              existingData.add(row);
             }
-            print('📊 Found ${existingData.length} existing rows, ${imageMap.length} images');
+            print('📊 Read ${existingData.length} existing rows with ${imageMap.length} images');
           }
         } catch (e) {
           print('⚠️ Could not read existing file: $e');
@@ -113,15 +130,23 @@ class ExcelExportServiceSyncfusion {
       final Workbook workbook = Workbook();
       final Worksheet worksheet = workbook.worksheets[0];
       worksheet.name = _sheetName;
+      
+      // Enable Right-to-Left (RTL) for Arabic text
+      worksheet.isRightToLeft = true;
+      print('✅ RTL mode enabled for Arabic text');
 
       // Step 3: Add headers
       await _addHeadersSyncfusion(worksheet, survey, surveyAnswers);
 
-      // Step 4: Add existing data and re-insert images
+      // Step 4: Add existing data with EXACT HEADER MATCH and re-insert images
       int currentRow = 2; // Start after header
       for (int rowIdx = 0; rowIdx < existingData.length; rowIdx++) {
-        final rowData = existingData[rowIdx];
-        for (int col = 0; col < rowData.length && col < _headerStructure.length; col++) {
+        final oldRowData = existingData[rowIdx];
+        
+        // Write data to new columns using exact header match
+        for (int col = 0; col < _headerStructure.length; col++) {
+          final newHeader = _headerStructure[col];
+          final newHeaderText = _formatHeaderText(newHeader);
           final cell = worksheet.getRangeByIndex(currentRow, col + 1);
           
           // Check if this cell should have an image
@@ -131,13 +156,18 @@ class ExcelExportServiceSyncfusion {
             print('🖼️ Re-inserting image at row $currentRow, col ${col + 1}');
             await _insertImageToCell(worksheet, imageMap[imageKey]!, currentRow, col + 1);
           } else {
-            // Regular text cell
-            cell.setText(rowData[col].toString());
+            // Regular text cell - use exact header match from old data
+            String cellValue = '';
+            if (oldRowData.containsKey(newHeaderText)) {
+              cellValue = oldRowData[newHeaderText]!;
+            }
+            // If no exact match, leave empty (for new columns)
+            cell.setText(cellValue);
           }
         }
         currentRow++;
       }
-      print('📋 Added ${existingData.length} existing rows with ${imageMap.length} images');
+      print('📋 Added ${existingData.length} existing rows with ${imageMap.length} images, matched to new ${_headerStructure.length} columns');
 
       // Step 5: Add new survey response with images
       await _addSurveyResponseSyncfusion(worksheet, survey, surveyAnswers, currentRow, directory: directory);
@@ -212,39 +242,135 @@ class ExcelExportServiceSyncfusion {
     ]);
 
     // Question columns
+    // Groups and questions share the SAME order numbering in the survey
+    // Merge them and sort by order to get correct Excel column order
     for (final section in survey.sections ?? []) {
-      // Add groups
+      // Create combined list of groups and questions with their order
+      final List<Map<String, dynamic>> items = [];
+      
       for (final group in section.questionGroups) {
-        // Use groupRepetitions if provided, otherwise fall back to _getMaxRepetitions
-        final maxRepetitions = groupRepetitions?[group.id] ?? _getMaxRepetitions(group.id, surveyAnswers);
-        print('📊 Group ${group.id} (${group.name}): using $maxRepetitions repetitions');
+        items.add({'type': 'group', 'order': group.order, 'data': group});
+      }
+      
+      for (final question in section.questions) {
+        items.add({'type': 'question', 'order': question.order, 'data': question});
+      }
+      
+      // Sort by order to get correct sequence
+      // If order is equal, Questions come before Groups
+      items.sort((a, b) {
+        final orderA = a['order'] as int;
+        final orderB = b['order'] as int;
         
-        for (int i = 0; i < maxRepetitions; i++) {
-          for (final question in group.questions) {
-            structure.add({
-              'type': 'group',
-              'text': '${question.code} (${i + 1})',
-              'fullText': '${question.text} (تكرار ${i + 1})',
-              'questionId': question.id,
-              'instanceIndex': i,
-            });
+        if (orderA != orderB) {
+          return orderA.compareTo(orderB);
+        }
+        
+        // Same order: Questions before Groups
+        if (a['type'] == 'question' && b['type'] == 'group') {
+          return -1; // a comes first
+        } else if (a['type'] == 'group' && b['type'] == 'question') {
+          return 1; // b comes first
+        }
+        
+        return 0; // Same type, keep original order
+      });
+      
+      // DYNAMIC REORDERING: Move groups to appear right after their triggering questions
+      // This ensures related questions and groups are adjacent in Excel
+      final Map<int, int> groupToQuestionMap = {}; // groupId -> triggering questionId
+      
+      // First pass: identify which groups should be moved after which questions
+      for (final item in items) {
+        if (item['type'] == 'group') {
+          final group = item['data'];
+          
+          // Check if this group has a triggering question via targetConditions
+          for (final condition in group.targetConditions) {
+            if (condition.sourceQuestionId != null) {
+              groupToQuestionMap[group.id] = condition.sourceQuestionId;
+              print('🔗 Group ${group.id} (${group.name}) should appear after Q${condition.sourceQuestionId}');
+              break; // Use first triggering question
+            }
           }
         }
       }
-
-      // Add direct questions
-      final sortedDirectQuestions = List<QuestionModel>.from(section.questions)
-        ..sort((a, b) => a.order.compareTo(b.order));
       
-      for (final question in sortedDirectQuestions) {
-        print('📋 Adding direct question to header: ${question.id} - ${question.code} - ${question.text.substring(0, question.text.length > 30 ? 30 : question.text.length)}...');
-        structure.add({
-          'type': 'direct',
-          'text': question.code,
-          'fullText': question.text,
-          'questionId': question.id,
-          'instanceIndex': null,
-        });
+      // Second pass: build reordered list
+      final List<Map<String, dynamic>> reorderedItems = [];
+      final Set<int> processedGroupIds = {};
+      
+      for (final item in items) {
+        // Skip groups that will be moved (they'll be added after their triggering question)
+        if (item['type'] == 'group') {
+          final group = item['data'];
+          if (groupToQuestionMap.containsKey(group.id)) {
+            continue; // Skip, will be added later
+          }
+        }
+        
+        reorderedItems.add(item);
+        
+        // If this is a question, add any groups triggered by it
+        if (item['type'] == 'question') {
+          final question = item['data'];
+          
+          // Find groups that this question triggers
+          for (final otherItem in items) {
+            if (otherItem['type'] == 'group') {
+              final group = otherItem['data'];
+              
+              // Skip if already processed
+              if (processedGroupIds.contains(group.id)) continue;
+              
+              // Check if this group should appear after current question
+              if (groupToQuestionMap[group.id] == question.id) {
+                reorderedItems.add(otherItem);
+                processedGroupIds.add(group.id);
+                print('✅ Added Group ${group.id} after Q${question.id}');
+              }
+            }
+          }
+        }
+      }
+      
+      // Replace items with reordered list
+      items.clear();
+      items.addAll(reorderedItems);
+      
+      // Process in sorted order
+      for (final item in items) {
+        if (item['type'] == 'group') {
+          final group = item['data'];
+          final fromMap = groupRepetitions?[group.id] ?? 0;
+          final fromAnswers = _getMaxRepetitions(group.id, surveyAnswers);
+          final maxRepetitions = fromMap > fromAnswers ? fromMap : fromAnswers;
+          print('📊 Group ${group.id} (${group.name}): order=${group.order}, fromMap=$fromMap, fromAnswers=$fromAnswers, using maxRepetitions=$maxRepetitions');
+          print('   Group has ${group.questions.length} questions');
+          
+          for (int i = 0; i < maxRepetitions; i++) {
+            for (final question in group.questions) {
+              print('   📋 Adding group question to header: ${question.id} - ${question.code} - ${question.text.substring(0, question.text.length > 30 ? 30 : question.text.length)}...');
+              structure.add({
+                'type': 'group',
+                'text': '${question.code} (${i + 1})',
+                'fullText': '${question.text} (تكرار ${i + 1})',
+                'questionId': question.id,
+                'instanceIndex': i,
+              });
+            }
+          }
+        } else {
+          final question = item['data'];
+          print('📋 Adding direct question to header: ${question.id} - ${question.code} - order=${question.order} - ${question.text.substring(0, question.text.length > 30 ? 30 : question.text.length)}...');
+          structure.add({
+            'type': 'direct',
+            'text': question.code,
+            'fullText': question.text,
+            'questionId': question.id,
+            'instanceIndex': null,
+          });
+        }
       }
     }
   }
@@ -791,5 +917,29 @@ class ExcelExportServiceSyncfusion {
       print('❌ Error getting file info: $e');
       return null;
     }
+  }
+
+  /// Format header text from header map (same as old excel_export_service.dart)
+  String _formatHeaderText(Map<String, dynamic> header) {
+    if (header['type'] == 'basic') {
+      return header['text'];
+    } else {
+      String text = header['fullText'] ?? header['text'];
+      if (header['instanceIndex'] != null) {
+        text = '[${header['instanceIndex'] + 1}] $text';
+      }
+      return text;
+    }
+  }
+
+  /// Find header index by text for matching old data to new structure
+  int _findHeaderIndexByText(String headerText) {
+    for (int i = 0; i < _headerStructure.length; i++) {
+      final formattedText = _formatHeaderText(_headerStructure[i]);
+      if (formattedText == headerText) {
+        return i;
+      }
+    }
+    return -1; // Not found
   }
 }

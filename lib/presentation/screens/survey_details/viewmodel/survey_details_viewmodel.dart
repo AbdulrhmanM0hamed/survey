@@ -344,8 +344,18 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       _sectionVisibility[section.id] = section.isActive;
 
       for (final group in section.questionGroups) {
-        // Reset group visibility and repetitions to default
-        _groupVisibility[group.id] = group.isActive;
+        // Check if group has Show targetConditions - if so, it should be hidden by default
+        final hasShowConditions = group.targetConditions.any(
+          (c) => c.actionEnum == ConditionAction.show
+        );
+        
+        if (hasShowConditions) {
+          // Group with Show conditions should be hidden until condition is met
+          _groupVisibility[group.id] = false;
+        } else {
+          // Regular group - use default isActive state
+          _groupVisibility[group.id] = group.isActive;
+        }
         _groupRepetitions[group.id] = group.minCount;
 
         for (final question in group.questions) {
@@ -368,6 +378,13 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       print('🔍 Evaluating ${group.targetConditions.length} conditions for group ${group.id} (${group.code})');
     }
     
+    // Special debug for Group 97
+    if (group.id == 97) {
+      print('⭐⭐⭐ SPECIAL DEBUG GROUP 97 ⭐⭐⭐');
+      print('   Group name: ${group.name}');
+      print('   targetConditions count: ${group.targetConditions.length}');
+    }
+    
     // Since all conditions in a group target the same group, use OR logic
     bool anyConditionMet = false;
     dynamic firstCondition = group.targetConditions.isNotEmpty ? group.targetConditions.first : null;
@@ -375,7 +392,18 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     for (final condition in group.targetConditions) {
       final answer = _getAnswerValue(condition.sourceQuestionId);
       print('   Group Condition: action=${condition.actionEnum}, value=${condition.value}, operator=${condition.operatorEnum}');
-      print('   Answer value: $answer');
+      print('   Answer value: $answer (type: ${answer.runtimeType})');
+      
+      // Debug: show source question choices for Group 97
+      if (group.id == 97) {
+        final sourceQ = _findQuestionById(condition.sourceQuestionId);
+        if (sourceQ != null) {
+          print('   Source Question ${sourceQ.id} choices:');
+          for (final c in sourceQ.choices) {
+            print('      - id: ${c.id}, label: "${c.label}"');
+          }
+        }
+      }
 
       // Check if condition is met
       final conditionMet = _isConditionMet(answer, condition);
@@ -588,7 +616,14 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     switch (action) {
       case ConditionAction.show:
         _groupVisibility[groupId] = true;
-        print('   ✅ Group $groupId is now VISIBLE');
+        // Ensure the group has at least 1 repetition when shown
+        final currentRepetitions = _groupRepetitions[groupId] ?? 0;
+        if (currentRepetitions == 0) {
+          _groupRepetitions[groupId] = 1;
+          print('   ✅ Group $groupId is now VISIBLE (set repetitions to 1)');
+        } else {
+          print('   ✅ Group $groupId is now VISIBLE');
+        }
         break;
       case ConditionAction.hide:
         _groupVisibility[groupId] = false;
@@ -687,12 +722,16 @@ class SurveyDetailsViewModel extends ChangeNotifier {
 
     switch (action) {
       case ConditionAction.show:
-        // Reverse of Show: return to default visibility
-        _groupVisibility[groupId] = group.isActive;
+        // Reverse of Show: HIDE the group (condition not met means should stay hidden)
+        _groupVisibility[groupId] = false;
+        // Also clear any answers for this group to prevent showing old data
+        _clearGroupAnswers(groupId); // Fire-and-forget
+        print('   🔄 Group $groupId hidden (Show condition not met), clearing answers...');
         break;
       case ConditionAction.hide:
-        // Reverse of Hide: show the group
-        _groupVisibility[groupId] = group.isActive;
+        // Reverse of Hide: SHOW the group
+        _groupVisibility[groupId] = true;
+        print('   🔄 Group $groupId shown (Hide condition not met)');
         break;
       case ConditionAction.require:
         // Reverse of Require: return to default visibility and repetitions
@@ -762,6 +801,25 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       if (section.id == sectionId) return section;
     }
     return null;
+  }
+
+  Future<void> _clearGroupAnswers(int groupId) async {
+    if (_surveyAnswers == null) return;
+    
+    // Count answers before clearing
+    final answersCount = _surveyAnswers!.answers.where((a) => a.groupId == groupId).length;
+    
+    if (answersCount == 0) return; // Nothing to clear
+    
+    // Remove all answers for this group
+    _surveyAnswers = _surveyAnswers!.copyWith(
+      answers: _surveyAnswers!.answers.where((a) => a.groupId != groupId).toList(),
+    );
+    
+    // Save the updated answers
+    await repository.saveSurveyAnswers(surveyAnswers: _surveyAnswers!);
+    
+    print('   🗑️ Cleared and saved $answersCount answers for group $groupId');
   }
 
   dynamic _getAnswerValue(int questionId) {
@@ -1033,6 +1091,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       }
       
       // Export to daily Excel file
+      print('📊 Exporting to Excel with groupRepetitions: $_groupRepetitions');
       final excelService = ExcelExportServiceSyncfusion();
       final filePath = await excelService.exportSurveyToExcel(
         survey: _survey!,
