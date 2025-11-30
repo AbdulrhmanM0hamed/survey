@@ -446,6 +446,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                             ],
                           ),
                         ),
+                        const SizedBox(height: 45),
                       ],
                     ),
                   ),

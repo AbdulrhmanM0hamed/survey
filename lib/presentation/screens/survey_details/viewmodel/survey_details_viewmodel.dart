@@ -385,6 +385,15 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       print('   targetConditions count: ${group.targetConditions.length}');
     }
     
+    // Special debug for Group 101 (الجنسية)
+    if (group.id == 101) {
+      print('🌟🌟🌟 SPECIAL DEBUG GROUP 101 (الجنسية) 🌟🌟🌟');
+      print('   Group name: ${group.name}');
+      print('   Group code: ${group.code}');
+      print('   Current visibility: ${_groupVisibility[101]}');
+      print('   targetConditions count: ${group.targetConditions.length}');
+    }
+    
     // Since all conditions in a group target the same group, use OR logic
     bool anyConditionMet = false;
     dynamic firstCondition = group.targetConditions.isNotEmpty ? group.targetConditions.first : null;
@@ -394,14 +403,16 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       print('   Group Condition: action=${condition.actionEnum}, value=${condition.value}, operator=${condition.operatorEnum}');
       print('   Answer value: $answer (type: ${answer.runtimeType})');
       
-      // Debug: show source question choices for Group 97
-      if (group.id == 97) {
+      // Debug: show source question choices for Group 97 and 101
+      if (group.id == 97 || group.id == 101) {
         final sourceQ = _findQuestionById(condition.sourceQuestionId);
         if (sourceQ != null) {
-          print('   Source Question ${sourceQ.id} choices:');
+          print('   Source Question ${sourceQ.id} (${sourceQ.code}) choices:');
           for (final c in sourceQ.choices) {
-            print('      - id: ${c.id}, label: "${c.label}"');
+            print('      - id: ${c.id}, code: "${c.code}", label: "${c.label}"');
           }
+        } else {
+          print('   ⚠️ Source Question ${condition.sourceQuestionId} NOT FOUND!');
         }
       }
 
@@ -420,9 +431,20 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       if (anyConditionMet) {
         print('   ✅ At least one condition met → applying action');
         _applyConditionAction(firstCondition);
+        
+        // Extra debug for Group 101
+        if (group.id == 101) {
+          print('   🌟 Group 101 visibility after action: ${_groupVisibility[101]}');
+          print('   🌟 Group 101 repetitions: ${_groupRepetitions[101]}');
+        }
       } else {
         print('   ❌ No conditions met → applying reverse action');
         _applyReverseConditionAction(firstCondition);
+        
+        // Extra debug for Group 101
+        if (group.id == 101) {
+          print('   🌟 Group 101 visibility after reverse: ${_groupVisibility[101]}');
+        }
       }
     }
   }
@@ -431,6 +453,17 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     // Evaluate all sourceConditions from this question
     if (question.sourceConditions.isNotEmpty) {
       print('🔍 Evaluating ${question.sourceConditions.length} conditions for question ${question.id} (${question.code})');
+    }
+    
+    // Special debug for questions 20906 and 20911 (الجنسية)
+    if (question.id == 20906 || question.id == 20911) {
+      print('🌟 SPECIAL DEBUG Q${question.id} (${question.text})');
+      print('   Question code: ${question.code}');
+      print('   Current answer: ${_getAnswerValue(question.id)}');
+      print('   sourceConditions count: ${question.sourceConditions.length}');
+      for (final cond in question.sourceConditions) {
+        print('   - targetGroupId: ${cond.targetGroupId}, action: ${cond.actionEnum}, value: "${cond.value}"');
+      }
     }
     
     // Group conditions by target (targetType + targetId)
@@ -722,11 +755,47 @@ class SurveyDetailsViewModel extends ChangeNotifier {
 
     switch (action) {
       case ConditionAction.show:
-        // Reverse of Show: HIDE the group (condition not met means should stay hidden)
-        _groupVisibility[groupId] = false;
-        // Also clear any answers for this group to prevent showing old data
-        _clearGroupAnswers(groupId); // Fire-and-forget
-        print('   🔄 Group $groupId hidden (Show condition not met), clearing answers...');
+        // IMPORTANT: Don't hide the group if it's currently visible
+        // It might be visible due to another condition from a different question
+        // Only hide if it was originally hidden (default state)
+        final currentVisibility = _groupVisibility[groupId] ?? false;
+        
+        // Special handling for Group 101 - check if any other condition is met
+        if (groupId == 101 && currentVisibility) {
+          print('   ⚠️ Group 101 is currently visible, checking other conditions before hiding...');
+          
+          // Check if any target condition for this group is met
+          bool anyConditionMet = false;
+          for (final section in _survey?.sections ?? []) {
+            for (final grp in section.questionGroups) {
+              if (grp.id == groupId) {
+                for (final cond in grp.targetConditions) {
+                  final answer = _getAnswerValue(cond.sourceQuestionId);
+                  if (_isConditionMet(answer, cond)) {
+                    anyConditionMet = true;
+                    print('   ✅ Condition from Q${cond.sourceQuestionId} is still met, keeping group visible');
+                    break;
+                  }
+                }
+                if (anyConditionMet) break;
+              }
+            }
+            if (anyConditionMet) break;
+          }
+          
+          if (!anyConditionMet) {
+            _groupVisibility[groupId] = false;
+            _clearGroupAnswers(groupId);
+            print('   🔄 Group $groupId hidden (no conditions met), clearing answers...');
+          }
+        } else if (!group.isActive) {
+          // Only hide if the group was originally hidden by default
+          _groupVisibility[groupId] = false;
+          _clearGroupAnswers(groupId);
+          print('   🔄 Group $groupId hidden (Show condition not met), clearing answers...');
+        } else {
+          print('   ℹ️ Group $groupId keeps default visibility (${group.isActive})');
+        }
         break;
       case ConditionAction.hide:
         // Reverse of Hide: SHOW the group
@@ -867,6 +936,13 @@ class SurveyDetailsViewModel extends ChangeNotifier {
   }) async {
     print('💾 saveAnswer called: questionId=$questionId, code=$questionCode, value=$value');
     print('   _surveyAnswers is null? ${_surveyAnswers == null}');
+    
+    // Special debug for nationality questions
+    if (questionId == 20906 || questionId == 20911) {
+      print('🌟🌟🌟 SAVING NATIONALITY QUESTION Q$questionId 🌟🌟🌟');
+      print('   Value: $value (type: ${value.runtimeType})');
+      print('   This should trigger Group 101 (الجنسية) if value is "اخري" choice');
+    }
     
     if (_surveyAnswers == null) {
       print('   ❌ EARLY RETURN: _surveyAnswers is null!');
