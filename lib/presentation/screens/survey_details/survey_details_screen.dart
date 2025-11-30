@@ -129,7 +129,18 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           backgroundColor: Color(0xff25935F),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              // If on first section, go back to previous screen
+              if (_currentSectionIndex == 0) {
+                Navigator.pop(context);
+              } else {
+                // Otherwise, go to previous section
+                _pageController.previousPage(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              }
+            },
           ),
           title: Consumer<SurveyDetailsViewModel>(
             builder: (context, viewModel, child) {

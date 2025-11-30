@@ -596,15 +596,19 @@ class _ConsentScreenState extends State<ConsentScreen> {
             ),
             
             // Bottom Button
-            InkWell(
-              onTap: _isApproved != null ? _continue : null,
-              child: Container(
-                width: double.infinity,
-                height: 60,
-                color: _isApproved != null 
-                    ? const Color(0xff25935F) 
-                    : Colors.grey.shade400,
-                alignment: Alignment.center,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isApproved != null 
+                      ? const Color(0xff25935F) 
+                      : Colors.grey.shade400,
+                  minimumSize: const Size(double.infinity, 56),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: _isApproved != null ? _continue : null,
                 child: const Text(
                   'متابعة',
                   style: TextStyle(
@@ -615,6 +619,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 45),
           ],
         ),
       ),
