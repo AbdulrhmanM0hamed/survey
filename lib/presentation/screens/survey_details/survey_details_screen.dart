@@ -461,11 +461,17 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
     final List<Widget> regularWidgets = [];
     final List<QuestionModel> ratingQuestions = [];
 
-    // Create a map of source question ID to group for quick lookup
-    final Map<int, QuestionGroupModel> sourceQuestionToGroup = {};
+    // Create a map of source question ID to groups (support multiple groups per question)
+    final Map<int, List<QuestionGroupModel>> sourceQuestionToGroups = {};
     for (var group in groups) {
       for (var condition in group.targetConditions) {
-        sourceQuestionToGroup[condition.sourceQuestionId] = group;
+        if (!sourceQuestionToGroups.containsKey(condition.sourceQuestionId)) {
+          sourceQuestionToGroups[condition.sourceQuestionId] = [];
+        }
+        // Only add if not already in the list
+        if (!sourceQuestionToGroups[condition.sourceQuestionId]!.contains(group)) {
+          sourceQuestionToGroups[condition.sourceQuestionId]!.add(group);
+        }
       }
     }
 
@@ -477,13 +483,15 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
         // Add non-rating question
         regularWidgets.add(_buildDirectQuestion(question, viewModel));
 
-        // Check if this question has a related group
-        final relatedGroup = sourceQuestionToGroup[question.id];
-        if (relatedGroup != null) {
-          // Add the related group immediately after the question
-          regularWidgets.add(_buildQuestionGroup(relatedGroup, viewModel));
-          // Remove from groups list to avoid duplicating
-          groups.remove(relatedGroup);
+        // Check if this question has related groups
+        final relatedGroups = sourceQuestionToGroups[question.id];
+        if (relatedGroups != null && relatedGroups.isNotEmpty) {
+          // Add all related groups immediately after the question
+          for (var relatedGroup in relatedGroups) {
+            regularWidgets.add(_buildQuestionGroup(relatedGroup, viewModel));
+            // Remove from groups list to avoid duplicating
+            groups.remove(relatedGroup);
+          }
         }
       }
     }
@@ -713,6 +721,27 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
     print(
       '🎨 Building group ${group.id} (${group.name}) with $repetitions repetitions',
     );
+    
+    // Get all groups in this section to check for related conditional groups
+    final section = viewModel.visibleSections.firstWhere(
+      (s) => s.questionGroups.any((g) => g.id == group.id),
+      orElse: () => viewModel.visibleSections.first,
+    );
+    final allGroups = viewModel.getVisibleGroups(section);
+    
+    // Create map of question IDs to related groups
+    final Map<int, List<QuestionGroupModel>> questionToRelatedGroups = {};
+    for (var grp in allGroups) {
+      if (grp.id == group.id) continue; // Skip self
+      for (var condition in grp.targetConditions) {
+        if (!questionToRelatedGroups.containsKey(condition.sourceQuestionId)) {
+          questionToRelatedGroups[condition.sourceQuestionId] = [];
+        }
+        if (!questionToRelatedGroups[condition.sourceQuestionId]!.contains(grp)) {
+          questionToRelatedGroups[condition.sourceQuestionId]!.add(grp);
+        }
+      }
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -783,64 +812,82 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
               //     ),
               //   ),
               // ),
-              ...viewModel.getVisibleQuestions(group: group).map((question) {
-                // Find answer for this question and instance
-                AnswerModel? answer;
-                try {
-                  answer = viewModel.surveyAnswers?.answers.firstWhere(
-                    (a) =>
-                        a.questionId == question.id &&
-                        a.groupInstanceId == instanceIndex,
-                  );
-                } catch (e) {
-                  answer = null;
-                }
-
-                // Auto-fill member index with (instanceIndex + 1)
-                final initialValue =
-                    (question.code == 'IND_MEMBER_INDEX' &&
-                        answer?.value == null)
-                    ? (instanceIndex + 1)
-                    : answer?.value;
-
-                // Auto-save member index on first render
-                if (question.code == 'IND_MEMBER_INDEX' &&
-                    answer?.value == null) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    viewModel.saveAnswer(
-                      questionId: question.id,
-                      questionCode: question.code,
-                      value: instanceIndex + 1,
-                      groupInstanceId: instanceIndex,
+              ...() {
+                final widgets = <Widget>[];
+                final questions = viewModel.getVisibleQuestions(group: group);
+                
+                for (var question in questions) {
+                  // Find answer for this question and instance
+                  AnswerModel? answer;
+                  try {
+                    answer = viewModel.surveyAnswers?.answers.firstWhere(
+                      (a) =>
+                          a.questionId == question.id &&
+                          a.groupInstanceId == instanceIndex,
                     );
-                  });
-                }
+                  } catch (e) {
+                    answer = null;
+                  }
 
-                return QuestionWidget(
-                  question: question,
-                  initialValue: initialValue,
-                  onChanged: (value) async {
-                    try {
-                      print(
-                        '🔵 QuestionWidget callback: questionId=${question.id}, code=${question.code}, value=$value, instanceIndex=$instanceIndex',
-                      );
-                      print('   Calling viewModel.saveAnswer...');
-                      await viewModel.saveAnswer(
+                  // Auto-fill member index with (instanceIndex + 1)
+                  final initialValue =
+                      (question.code == 'IND_MEMBER_INDEX' &&
+                          answer?.value == null)
+                      ? (instanceIndex + 1)
+                      : answer?.value;
+
+                  // Auto-save member index on first render
+                  if (question.code == 'IND_MEMBER_INDEX' &&
+                      answer?.value == null) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      viewModel.saveAnswer(
                         questionId: question.id,
                         questionCode: question.code,
-                        value: value,
+                        value: instanceIndex + 1,
                         groupInstanceId: instanceIndex,
                       );
-                      print('   saveAnswer completed successfully');
-                    } catch (e, stackTrace) {
-                      print('❌ ERROR in saveAnswer: $e');
-                      print('   StackTrace: $stackTrace');
+                    });
+                  }
+
+                  // Add the question widget
+                  widgets.add(QuestionWidget(
+                    question: question,
+                    initialValue: initialValue,
+                    onChanged: (value) async {
+                      try {
+                        print(
+                          '🔵 QuestionWidget callback: questionId=${question.id}, code=${question.code}, value=$value, instanceIndex=$instanceIndex',
+                        );
+                        print('   Calling viewModel.saveAnswer...');
+                        await viewModel.saveAnswer(
+                          questionId: question.id,
+                          questionCode: question.code,
+                          value: value,
+                          groupInstanceId: instanceIndex,
+                        );
+                        print('   saveAnswer completed successfully');
+                      } catch (e, stackTrace) {
+                        print('❌ ERROR in saveAnswer: $e');
+                        print('   StackTrace: $stackTrace');
+                      }
+                    },
+                    isRequired: viewModel.isQuestionRequired(question.id),
+                  ));
+                  
+                  // Check if this question has related conditional groups
+                  // Only add on first instance to avoid duplicates
+                  if (instanceIndex == 0) {
+                    final relatedGroups = questionToRelatedGroups[question.id];
+                    if (relatedGroups != null && relatedGroups.isNotEmpty) {
+                      for (var relatedGroup in relatedGroups) {
+                        widgets.add(_buildQuestionGroup(relatedGroup, viewModel));
+                      }
                     }
-                  },
-                  isRequired: viewModel.isQuestionRequired(question.id),
-                  groupInstanceId: instanceIndex,
-                );
-              }),
+                  }
+                }
+                
+                return widgets;
+              }(),
             ],
           );
         }),
