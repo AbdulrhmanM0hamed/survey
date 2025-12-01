@@ -174,7 +174,7 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
                         survey: survey,
                         onTap: () {
                           final startTime = DateTime.now();
-                          print('🕒 Survey Start Time captured: $startTime');
+                          //print('🕒 Survey Start Time captured: $startTime');
                           
                           Navigator.push(
                             context,

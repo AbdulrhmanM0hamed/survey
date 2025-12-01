@@ -34,13 +34,13 @@ class _TextQuestionWidgetState extends State<TextQuestionWidget> {
     // Listen to focus changes for auto-save
     _focusNode.addListener(_onFocusChange);
     
-    print('📋 TextQuestionWidget initState: initialValue="${widget.initialValue}"');
+    //print('📋 TextQuestionWidget initState: initialValue="${widget.initialValue}"');
   }
   
   void _onFocusChange() {
     if (!_focusNode.hasFocus && _controller.text.isNotEmpty) {
       // Auto-save when user leaves the field
-      print('🔄 Auto-saving on unfocus: value="${_controller.text}"');
+      //print('🔄 Auto-saving on unfocus: value="${_controller.text}"');
       widget.onChanged(_controller.text);
     }
   }
@@ -50,7 +50,7 @@ class _TextQuestionWidgetState extends State<TextQuestionWidget> {
     super.didUpdateWidget(oldWidget);
     // Update controller if initialValue changed
     if (widget.initialValue != oldWidget.initialValue) {
-      print('📋 TextQuestionWidget didUpdateWidget: old="${oldWidget.initialValue}", new="${widget.initialValue}"');
+      //print('📋 TextQuestionWidget didUpdateWidget: old="${oldWidget.initialValue}", new="${widget.initialValue}"');
       _controller.text = widget.initialValue ?? '';
     }
   }
@@ -132,7 +132,7 @@ class _TextQuestionWidgetState extends State<TextQuestionWidget> {
           },
           onSubmitted: (value) {
             // When user presses Done on keyboard - save the value
-            print('📝 TextField onSubmitted: value="$value", type=${widget.question.questionType}');
+            //print('📝 TextField onSubmitted: value="$value", type=${widget.question.questionType}');
             widget.onChanged(value);
             FocusScope.of(context).unfocus();
           },

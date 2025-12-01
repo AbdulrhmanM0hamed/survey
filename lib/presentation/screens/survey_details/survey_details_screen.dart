@@ -8,6 +8,7 @@ import 'package:survey/presentation/screens/survey_details/viewmodel/survey_deta
 import 'package:survey/presentation/widgets/question_widget.dart';
 import 'package:survey/presentation/widgets/question_widgets/rating_question_widget.dart';
 import 'package:survey/core/enums/question_type.dart';
+import 'package:survey/core/enums/condition_action.dart';
 
 class SurveyDetailsScreen extends StatefulWidget {
   final int surveyId;
@@ -475,6 +476,9 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
       }
     }
 
+    // Track which groups have been added to avoid duplicates at the end
+    final Set<int> addedGroupIds = {};
+
     // Separate rating questions from other questions
     for (var question in questions) {
       if (question.questionType == QuestionType.rating) {
@@ -486,19 +490,39 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
         // Check if this question has related groups
         final relatedGroups = sourceQuestionToGroups[question.id];
         if (relatedGroups != null && relatedGroups.isNotEmpty) {
-          // Add all related groups immediately after the question
           for (var relatedGroup in relatedGroups) {
-            regularWidgets.add(_buildQuestionGroup(relatedGroup, viewModel));
-            // Remove from groups list to avoid duplicating
-            groups.remove(relatedGroup);
+            // CRITICAL: Only show the group if THIS question is the trigger
+            final isTriggering = viewModel.isQuestionTriggeringGroup(relatedGroup.id, question.id);
+            
+            print('🔍 Q${question.id} → Group ${relatedGroup.id}: isTriggering=$isTriggering');
+            
+            if (isTriggering) {
+              print('   ✅ Adding Group ${relatedGroup.id} after Q${question.id}');
+              regularWidgets.add(_buildQuestionGroup(relatedGroup, viewModel));
+              addedGroupIds.add(relatedGroup.id);
+              groups.remove(relatedGroup);
+            }
           }
         }
       }
     }
 
     // Add any remaining groups that weren't linked to questions
+    // BUT skip conditional groups (those with Show targetConditions) - they should only appear after their trigger question
     for (var group in groups) {
-      regularWidgets.add(_buildQuestionGroup(group, viewModel));
+      if (!addedGroupIds.contains(group.id)) {
+        // Check if this is a conditional "show" group
+        final hasShowCondition = group.targetConditions.any(
+          (c) => c.actionEnum == ConditionAction.show
+        );
+        
+        if (hasShowCondition) {
+          print('   ⏭️ Skipping conditional group ${group.id} in remaining groups (will be added by trigger question)');
+          continue;
+        }
+        
+        regularWidgets.add(_buildQuestionGroup(group, viewModel));
+      }
     }
 
     // Build with CustomScrollView to support sticky header
@@ -617,8 +641,8 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                           value: value,
                         );
                       } catch (e, stackTrace) {
-                        print('❌ ERROR in saveAnswer: $e');
-                        print('   StackTrace: $stackTrace');
+                        //print('❌ ERROR in saveAnswer: $e');
+                        //print('   StackTrace: $stackTrace');
                       }
                     },
                     isRequired: viewModel.isQuestionRequired(question.id),
@@ -651,19 +675,17 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           initialValue: answer?.value,
           onChanged: (value) async {
             try {
-              print(
-                '🔴 Direct Question callback: questionId=${question.id}, code=${question.code}, value=$value',
-              );
-              print('   Calling viewModel.saveAnswer...');
+              //print('🔴 Direct Question callback: questionId=${question.id}, code=${question.code}, value=$value',);
+              //print('   Calling viewModel.saveAnswer...');
               await viewModel.saveAnswer(
                 questionId: question.id,
                 questionCode: question.code,
                 value: value,
               );
-              print('   saveAnswer completed successfully');
+              //print('   saveAnswer completed successfully');
             } catch (e, stackTrace) {
-              print('❌ ERROR in saveAnswer: $e');
-              print('   StackTrace: $stackTrace');
+              //print('❌ ERROR in saveAnswer: $e');
+              //print('   StackTrace: $stackTrace');
             }
           },
           isRequired: viewModel.isQuestionRequired(question.id),
@@ -718,9 +740,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
     SurveyDetailsViewModel viewModel,
   ) {
     final repetitions = viewModel.getGroupRepetitions(group.id);
-    print(
-      '🎨 Building group ${group.id} (${group.name}) with $repetitions repetitions',
-    );
+    //print('🎨 Building group ${group.id} (${group.name}) with $repetitions repetitions',);
     
     // Get all groups in this section to check for related conditional groups
     final section = viewModel.visibleSections.firstWhere(
@@ -788,9 +808,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           // ),
         ],
         ...List.generate(repetitions, (instanceIndex) {
-          print(
-            '   📝 Generating instance $instanceIndex for group ${group.id}',
-          );
+          //print('   📝 Generating instance $instanceIndex for group ${group.id}',);
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -855,20 +873,18 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                     initialValue: initialValue,
                     onChanged: (value) async {
                       try {
-                        print(
-                          '🔵 QuestionWidget callback: questionId=${question.id}, code=${question.code}, value=$value, instanceIndex=$instanceIndex',
-                        );
-                        print('   Calling viewModel.saveAnswer...');
+                        //print('🔵 QuestionWidget callback: questionId=${question.id}, code=${question.code}, value=$value, instanceIndex=$instanceIndex',);
+                        //print('   Calling viewModel.saveAnswer...');
                         await viewModel.saveAnswer(
                           questionId: question.id,
                           questionCode: question.code,
                           value: value,
                           groupInstanceId: instanceIndex,
                         );
-                        print('   saveAnswer completed successfully');
+                        //print('   saveAnswer completed successfully');
                       } catch (e, stackTrace) {
-                        print('❌ ERROR in saveAnswer: $e');
-                        print('   StackTrace: $stackTrace');
+                        //print('❌ ERROR in saveAnswer: $e');
+                        //print('   StackTrace: $stackTrace');
                       }
                     },
                     isRequired: viewModel.isQuestionRequired(question.id),
@@ -880,7 +896,15 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                     final relatedGroups = questionToRelatedGroups[question.id];
                     if (relatedGroups != null && relatedGroups.isNotEmpty) {
                       for (var relatedGroup in relatedGroups) {
-                        widgets.add(_buildQuestionGroup(relatedGroup, viewModel));
+                        // CRITICAL: Only show the group if THIS question is the trigger
+                        final isTriggering = viewModel.isQuestionTriggeringGroup(relatedGroup.id, question.id);
+                        
+                        print('   🔍 [Inside Group ${group.id}] Q${question.id} → Group ${relatedGroup.id}: isTriggering=$isTriggering');
+                        
+                        if (isTriggering) {
+                          print('      ✅ Adding Group ${relatedGroup.id} after Q${question.id}');
+                          widgets.add(_buildQuestionGroup(relatedGroup, viewModel));
+                        }
                       }
                     }
                   }
@@ -1101,22 +1125,22 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
               );
 
               try {
-                print('🎯 Starting export from UI...');
+                //print('🎯 Starting export from UI...');
                 final filePath = await viewModel.exportToExcel();
-                print('✅ Export completed, filePath: $filePath');
+                //print('✅ Export completed, filePath: $filePath');
 
-                print('🔄 Closing loading dialog...');
+                //print('🔄 Closing loading dialog...');
                 navigator.pop(); // Close loading using saved navigator
-                print('✅ Loading dialog closed');
+                //print('✅ Loading dialog closed');
 
                 if (filePath != null) {
-                  print('📋 Showing success dialog...');
+                  //print('📋 Showing success dialog...');
                   if (mounted) {
                     try {
                       _showExportSuccessDialog(context, viewModel, filePath);
                     } catch (e) {
-                      print('❌ Error showing success dialog: $e');
-                      print('⚠️ Showing snackbar instead');
+                      //print('❌ Error showing success dialog: $e');
+                      //print('⚠️ Showing snackbar instead');
                       scaffoldMessenger.showSnackBar(
                         SnackBar(
                           content: Text('تم التصدير بنجاح: $filePath'),
@@ -1133,7 +1157,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                       );
                     }
                   } else {
-                    print('⚠️ Widget not mounted, showing snackbar instead');
+                    //print('⚠️ Widget not mounted, showing snackbar instead');
                     scaffoldMessenger.showSnackBar(
                       SnackBar(
                         content: Text('تم التصدير بنجاح: $filePath'),
@@ -1144,7 +1168,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                   }
                 }
               } catch (e) {
-                print('❌ Export error: $e');
+                //print('❌ Export error: $e');
                 navigator.pop(); // Close loading using saved navigator
 
                 // Show error message
@@ -1233,16 +1257,16 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
               );
 
               try {
-                print('🎯 Starting export and clear from UI...');
+                //print('🎯 Starting export and clear from UI...');
                 final result = await viewModel.exportAndClearLocalData();
-                print('✅ Export and clear completed: $result');
+                //print('✅ Export and clear completed: $result');
 
-                print('🔄 Closing loading dialog...');
+                //print('🔄 Closing loading dialog...');
                 navigator.pop(); // Close loading using saved navigator
-                print('✅ Loading dialog closed');
+                //print('✅ Loading dialog closed');
 
                 if (!mounted) {
-                  print('⚠️ Widget not mounted, showing snackbar instead');
+                  //print('⚠️ Widget not mounted, showing snackbar instead');
                   scaffoldMessenger.showSnackBar(
                     SnackBar(
                       content: Text(
@@ -1255,7 +1279,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                   return;
                 }
 
-                print('📋 Showing success dialog...');
+                //print('📋 Showing success dialog...');
                 // Show success
                 try {
                   showDialog(
@@ -1316,8 +1340,8 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                     ),
                   );
                 } catch (e) {
-                  print('❌ Error showing success dialog: $e');
-                  print('⚠️ Showing snackbar instead');
+                  //print('❌ Error showing success dialog: $e');
+                  //print('⚠️ Showing snackbar instead');
                   scaffoldMessenger.showSnackBar(
                     SnackBar(
                       content: Text(
@@ -1329,7 +1353,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                   );
                 }
               } catch (e) {
-                print('❌ Export and clear error: $e');
+                //print('❌ Export and clear error: $e');
                 navigator.pop(); // Close loading using saved navigator
 
                 scaffoldMessenger.showSnackBar(

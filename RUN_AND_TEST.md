@@ -143,7 +143,7 @@ flutter run
 أضف في saveAnswer:
 
 ```dart
-print('All answers: ${_surveyAnswers!.answers.map((a) => "${a.questionId}:${a.value}").join(", ")}');
+//print('All answers: ${_surveyAnswers!.answers.map((a) => "${a.questionId}:${a.value}").join(", ")}');
 ```
 
 ### طباعة جميع الـ repetitions
@@ -151,7 +151,7 @@ print('All answers: ${_surveyAnswers!.answers.map((a) => "${a.questionId}:${a.va
 أضف في _evaluateAllConditions:
 
 ```dart
-print('All repetitions: $_groupRepetitions');
+//print('All repetitions: $_groupRepetitions');
 ```
 
 ### طباعة الـ sourceConditions
@@ -163,7 +163,7 @@ for (var section in _survey!.sections!) {
   for (var group in section.questionGroups) {
     for (var question in group.questions) {
       if (question.sourceConditions.isNotEmpty) {
-        print('Question ${question.id} has ${question.sourceConditions.length} sourceConditions');
+        //print('Question ${question.id} has ${question.sourceConditions.length} sourceConditions');
       }
     }
   }

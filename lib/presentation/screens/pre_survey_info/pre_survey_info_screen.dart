@@ -106,14 +106,14 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
             ),
           ]);
 
-          print('✅ Data fetched from API and cached');
+          //print('✅ Data fetched from API and cached');
         } catch (e) {
-          print('⚠️ API failed, trying cache: $e');
+          //print('⚠️ API failed, trying cache: $e');
           // If API fails, try cache
           results = await _loadFromCache();
         }
       } else {
-        print('📡 No internet, loading from cache');
+        //print('📡 No internet, loading from cache');
         // No connection, use cache
         results = await _loadFromCache();
       }

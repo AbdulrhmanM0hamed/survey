@@ -762,7 +762,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         
         // Special handling for Group 101 - check if any other condition is met
         if (groupId == 101 && currentVisibility) {
-          print('   ⚠️ Group 101 is currently visible, checking other conditions before hiding...');
+          print('   Group 101 is currently visible, checking other conditions before hiding...');
           
           // Check if any target condition for this group is met
           bool anyConditionMet = false;
@@ -773,7 +773,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                   final answer = _getAnswerValue(cond.sourceQuestionId);
                   if (_isConditionMet(answer, cond)) {
                     anyConditionMet = true;
-                    print('   ✅ Condition from Q${cond.sourceQuestionId} is still met, keeping group visible');
+                    print('   Condition from Q${cond.sourceQuestionId} is still met, keeping group visible');
                     break;
                   }
                 }
@@ -924,8 +924,43 @@ class SurveyDetailsViewModel extends ChangeNotifier {
 
   int getGroupRepetitions(int groupId) {
     final count = _groupRepetitions[groupId] ?? 1;
-    print('🔄 getGroupRepetitions: groupId=$groupId, count=$count');
+    //print('🔄 getGroupRepetitions: groupId=$groupId, count=$count');
     return count;
+  }
+
+  /// Checks if a specific question is currently triggering a conditional group
+  /// Returns true only if THIS question's answer meets the Show condition
+  bool isQuestionTriggeringGroup(int groupId, int questionId) {
+    final group = _findGroupById(groupId);
+    if (group == null || group.targetConditions.isEmpty) {
+      return false;
+    }
+    
+    // DON'T check isGroupVisible here!
+    // We want to know if THIS specific question is triggering the group,
+    // regardless of whether another question also triggers it.
+    
+    // Check if THIS question's answer meets a Show condition for this group
+    for (final condition in group.targetConditions) {
+      if (condition.actionEnum != ConditionAction.show) {
+        continue;
+      }
+      
+      if (condition.sourceQuestionId != questionId) {
+        continue;
+      }
+      
+      final answer = _getAnswerValue(questionId);
+      final isMet = _isConditionMet(answer, condition);
+      
+      print('🔍 isQuestionTriggeringGroup: groupId=$groupId, questionId=$questionId, answer=$answer, isMet=$isMet');
+      
+      if (isMet) {
+        return true;
+      }
+    }
+    
+    return false;
   }
 
   Future<void> saveAnswer({
@@ -1092,15 +1127,23 @@ class SurveyDetailsViewModel extends ChangeNotifier {
 
   List<SectionModel> get visibleSections {
     if (_survey?.sections == null) return [];
-    return _survey!.sections!
+    final sections = _survey!.sections!
         .where((section) => isSectionVisible(section.id))
         .toList();
+    
+    // Sort by order to maintain JSON order
+    sections.sort((a, b) => a.order.compareTo(b.order));
+    
+    return sections;
   }
 
   List<QuestionGroupModel> getVisibleGroups(SectionModel section) {
     final visibleGroups = section.questionGroups
         .where((group) => isGroupVisible(group.id))
         .toList();
+    
+    // Sort by order to maintain JSON order
+    visibleGroups.sort((a, b) => a.order.compareTo(b.order));
     
     print('📦 getVisibleGroups for section ${section.id}:');
     for (var group in section.questionGroups) {
@@ -1117,6 +1160,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       final visibleQuestions = allQuestions
           .where((question) => isQuestionVisible(question.id))
           .toList();
+      
+      // Sort by order to maintain JSON order
+      visibleQuestions.sort((a, b) => a.order.compareTo(b.order));
+      
       print('📋 getVisibleQuestions for group ${group.id}: ${visibleQuestions.length}/${allQuestions.length} visible');
       for (var q in allQuestions) {
         final visible = isQuestionVisible(q.id);
@@ -1126,9 +1173,14 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       }
       return visibleQuestions;
     } else if (section != null) {
-      return section.questions
+      final visibleQuestions = section.questions
           .where((question) => isQuestionVisible(question.id))
           .toList();
+      
+      // Sort by order to maintain JSON order
+      visibleQuestions.sort((a, b) => a.order.compareTo(b.order));
+      
+      return visibleQuestions;
     }
     return [];
   }

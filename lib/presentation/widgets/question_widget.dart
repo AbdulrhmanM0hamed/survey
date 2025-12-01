@@ -26,7 +26,7 @@ class QuestionWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('🎯 Building QuestionWidget: id=${question.id}, code=${question.code}, type=${question.questionType}, text=${question.text.substring(0, question.text.length > 30 ? 30 : question.text.length)}...');
+    //print('🎯 Building QuestionWidget: id=${question.id}, code=${question.code}, type=${question.questionType}, text=${question.text.substring(0, question.text.length > 30 ? 30 : question.text.length)}...');
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(16),
@@ -71,7 +71,7 @@ class QuestionWidget extends StatelessWidget {
           question: question,
           initialValue: initialValue?.toString(),
           onChanged: (value) {
-            print('QuestionWidget.onChanged: received value="$value" (${value.runtimeType})');
+            //print('QuestionWidget.onChanged: received value="$value" (${value.runtimeType})');
             
             // Convert value based on question type
             dynamic convertedValue;
@@ -79,7 +79,7 @@ class QuestionWidget extends StatelessWidget {
             if (question.questionType == QuestionType.integer) {
               // For integer: convert to int
               final intValue = int.tryParse(value);
-              print('  Converting to int: intValue=$intValue');
+              //print('  Converting to int: intValue=$intValue');
               if (intValue != null) {
                 convertedValue = intValue;
               } else {
@@ -99,15 +99,15 @@ class QuestionWidget extends StatelessWidget {
               convertedValue = value;
             }
             
-            print('  Converted value: $convertedValue (${convertedValue.runtimeType})');
+            //print('  Converted value: $convertedValue (${convertedValue.runtimeType})');
             
             // Only trigger onChanged if value is not null
             if (convertedValue != null) {
-              print('  ✅ Calling onChanged with value: $convertedValue');
+              //print('  ✅ Calling onChanged with value: $convertedValue');
               onChanged(convertedValue);
-              print('  ✅ onChanged completed');
+              //print('  ✅ onChanged completed');
             } else {
-              print('  ❌ convertedValue is null, not calling onChanged');
+              //print('  ❌ convertedValue is null, not calling onChanged');
             }
           },
           isRequired: isRequired,

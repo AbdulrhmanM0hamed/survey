@@ -231,14 +231,14 @@ if (group != null && count < group.minCount) {
 
 3. **تحقق من حفظ الإجابة:**
    ```dart
-   // أضف print في saveAnswer
-   print('Saved answer: questionId=$questionId, value=$value');
+   // أضف //print في saveAnswer
+   //print('Saved answer: questionId=$questionId, value=$value');
    ```
 
 4. **تحقق من التقييم:**
    ```dart
-   // أضف print في _applyGroupAction
-   print('Repetition: groupId=$groupId, count=$count');
+   // أضف //print في _applyGroupAction
+   //print('Repetition: groupId=$groupId, count=$count');
    ```
 
 ---

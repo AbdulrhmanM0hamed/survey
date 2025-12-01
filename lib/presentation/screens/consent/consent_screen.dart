@@ -117,9 +117,9 @@ class _ConsentScreenState extends State<ConsentScreen> {
       // If no last known position, get current position
       if (lastPosition != null) {
         finalPosition = lastPosition;
-        print('📍 Using last known position');
+        //print('📍 Using last known position');
       } else {
-        print('📍 Getting current position...');
+        //print('📍 Getting current position...');
         try {
           // Try medium accuracy first
           finalPosition = await Geolocator.getCurrentPosition(
@@ -135,7 +135,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
           );
         } catch (e) {
           if (e.toString().contains('timeout_medium')) {
-            print('⚠️ Medium accuracy timeout, trying low accuracy...');
+            //print('⚠️ Medium accuracy timeout, trying low accuracy...');
             // Fallback to low accuracy (faster)
             finalPosition = await Geolocator.getCurrentPosition(
               locationSettings: const LocationSettings(
