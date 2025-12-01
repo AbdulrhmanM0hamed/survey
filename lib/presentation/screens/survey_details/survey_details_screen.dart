@@ -645,9 +645,8 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                           questionCode: question.code,
                           value: value,
                         );
-                      } catch (e, stackTrace) {
+                      } catch (e) {
                         //print('❌ ERROR in saveAnswer: $e');
-                        //print('   StackTrace: $stackTrace');
                       }
                     },
                     isRequired: viewModel.isQuestionRequired(question.id),
@@ -688,9 +687,8 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                 value: value,
               );
               //print('   saveAnswer completed successfully');
-            } catch (e, stackTrace) {
+            } catch (e) {
               //print('❌ ERROR in saveAnswer: $e');
-              //print('   StackTrace: $stackTrace');
             }
           },
           isRequired: viewModel.isQuestionRequired(question.id),
@@ -742,10 +740,11 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
 
   Widget _buildQuestionGroup(
     QuestionGroupModel group,
-    SurveyDetailsViewModel viewModel,
-  ) {
+    SurveyDetailsViewModel viewModel, {
+    int? parentInstanceId,
+  }) {
     final repetitions = viewModel.getGroupRepetitions(group.id);
-    //print('🎨 Building group ${group.id} (${group.name}) with $repetitions repetitions',);
+    print('🎨 Building group ${group.id} (${group.name}) with $repetitions repetitions, parentInstance=$parentInstanceId');
     
     // Get all groups in this section to check for related conditional groups
     final section = viewModel.visibleSections.firstWhere(
@@ -840,13 +839,19 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                 final questions = viewModel.getVisibleQuestions(group: group);
                 
                 for (var question in questions) {
+                  // Determine the correct groupInstanceId:
+                  // - If this group has repetition condition (is a repeating group), use instanceIndex
+                  // - Otherwise, use parentInstanceId (from parent group)
+                  final hasRepetitionCondition = group.targetConditions.any((c) => c.actionEnum == ConditionAction.repetition);
+                  final effectiveInstanceId = hasRepetitionCondition ? instanceIndex : parentInstanceId;
+                  
                   // Find answer for this question and instance
                   AnswerModel? answer;
                   try {
                     answer = viewModel.surveyAnswers?.answers.firstWhere(
                       (a) =>
                           a.questionId == question.id &&
-                          a.groupInstanceId == instanceIndex,
+                          a.groupInstanceId == effectiveInstanceId,
                     );
                   } catch (e) {
                     answer = null;
@@ -858,7 +863,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                           answer?.value == null)
                       ? (instanceIndex + 1)
                       : answer?.value;
-
+                  
                   // Auto-save member index on first render
                   if (question.code == 'IND_MEMBER_INDEX' &&
                       answer?.value == null) {
@@ -867,7 +872,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                         questionId: question.id,
                         questionCode: question.code,
                         value: instanceIndex + 1,
-                        groupInstanceId: instanceIndex,
+                        groupInstanceId: effectiveInstanceId,
                       );
                     });
                   }
@@ -878,18 +883,15 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                     initialValue: initialValue,
                     onChanged: (value) async {
                       try {
-                        //print('🔵 QuestionWidget callback: questionId=${question.id}, code=${question.code}, value=$value, instanceIndex=$instanceIndex',);
-                        //print('   Calling viewModel.saveAnswer...');
+                        print('🔵 QuestionWidget callback: questionId=${question.id}, code=${question.code}, value=$value, effectiveInstance=$effectiveInstanceId');
                         await viewModel.saveAnswer(
                           questionId: question.id,
                           questionCode: question.code,
                           value: value,
-                          groupInstanceId: instanceIndex,
+                          groupInstanceId: effectiveInstanceId,
                         );
-                        //print('   saveAnswer completed successfully');
-                      } catch (e, stackTrace) {
-                        //print('❌ ERROR in saveAnswer: $e');
-                        //print('   StackTrace: $stackTrace');
+                      } catch (e) {
+                        print('❌ ERROR in saveAnswer: $e');
                       }
                     },
                     isRequired: viewModel.isQuestionRequired(question.id),
@@ -904,14 +906,14 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                       final isTriggering = viewModel.isQuestionTriggeringGroup(
                         relatedGroup.id, 
                         question.id,
-                        groupInstanceId: instanceIndex,
+                        groupInstanceId: effectiveInstanceId,
                       );
                       
-                      print('   🔍 [Inside Group ${group.id}, Instance $instanceIndex] Q${question.id} → Group ${relatedGroup.id}: isTriggering=$isTriggering');
+                      print('   🔍 [Inside Group ${group.id}, Instance $instanceIndex, Effective $effectiveInstanceId] Q${question.id} → Group ${relatedGroup.id}: isTriggering=$isTriggering');
                       
                       if (isTriggering) {
-                        print('      ✅ Adding Group ${relatedGroup.id} after Q${question.id} in instance $instanceIndex');
-                        widgets.add(_buildQuestionGroup(relatedGroup, viewModel));
+                        print('      ✅ Adding Group ${relatedGroup.id} after Q${question.id} with parentInstance=$instanceIndex');
+                        widgets.add(_buildQuestionGroup(relatedGroup, viewModel, parentInstanceId: instanceIndex));
                       }
                     }
                   }

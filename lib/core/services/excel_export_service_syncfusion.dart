@@ -39,7 +39,7 @@ class ExcelExportServiceSyncfusion {
         }
       }
 
-      // Get the file path - one file per day
+      // Get the file path - one file per day (appends if exists)
       final directory = await _getExportDirectory();
       final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
       final fileName = 'survey_${survey.id}_${survey.code}_$today.xlsx';
@@ -275,81 +275,59 @@ class ExcelExportServiceSyncfusion {
         return 0; // Same type, keep original order
       });
       
-      // DYNAMIC REORDERING: Move groups to appear right after their triggering questions
-      // This ensures related questions and groups are adjacent in Excel
-      final Map<int, int> groupToQuestionMap = {}; // groupId -> triggering questionId
-      
-      // First pass: identify which groups should be moved after which questions
+      // Build map of question -> conditional groups
+      final Map<int, List<dynamic>> questionToConditionalGroups = {};
       for (final item in items) {
         if (item['type'] == 'group') {
           final group = item['data'];
-          
-          // Check if this group has a triggering question via targetConditions
           for (final condition in group.targetConditions) {
             if (condition.sourceQuestionId != null) {
-              groupToQuestionMap[group.id] = condition.sourceQuestionId;
-              //print('🔗 Group ${group.id} (${group.name}) should appear after Q${condition.sourceQuestionId}');
-              break; // Use first triggering question
-            }
-          }
-        }
-      }
-      
-      // Second pass: build reordered list
-      final List<Map<String, dynamic>> reorderedItems = [];
-      final Set<int> processedGroupIds = {};
-      
-      for (final item in items) {
-        // Skip groups that will be moved (they'll be added after their triggering question)
-        if (item['type'] == 'group') {
-          final group = item['data'];
-          if (groupToQuestionMap.containsKey(group.id)) {
-            continue; // Skip, will be added later
-          }
-        }
-        
-        reorderedItems.add(item);
-        
-        // If this is a question, add any groups triggered by it
-        if (item['type'] == 'question') {
-          final question = item['data'];
-          
-          // Find groups that this question triggers
-          for (final otherItem in items) {
-            if (otherItem['type'] == 'group') {
-              final group = otherItem['data'];
-              
-              // Skip if already processed
-              if (processedGroupIds.contains(group.id)) continue;
-              
-              // Check if this group should appear after current question
-              if (groupToQuestionMap[group.id] == question.id) {
-                reorderedItems.add(otherItem);
-                processedGroupIds.add(group.id);
-                //print('✅ Added Group ${group.id} after Q${question.id}');
+              if (!questionToConditionalGroups.containsKey(condition.sourceQuestionId)) {
+                questionToConditionalGroups[condition.sourceQuestionId] = [];
+              }
+              if (!questionToConditionalGroups[condition.sourceQuestionId]!.contains(item)) {
+                questionToConditionalGroups[condition.sourceQuestionId]!.add(item);
               }
             }
           }
         }
       }
       
-      // Replace items with reordered list
-      items.clear();
-      items.addAll(reorderedItems);
+      // Track which groups are conditional (will be added inline)
+      final Set<int> conditionalGroupIds = {};
+      for (final groups in questionToConditionalGroups.values) {
+        for (final item in groups) {
+          conditionalGroupIds.add(item['data'].id);
+        }
+      }
+      
+      // Track added groups/questions to ensure nothing is missed
+      final Set<int> addedQuestionIds = {};
       
       // Process in sorted order
       for (final item in items) {
         if (item['type'] == 'group') {
           final group = item['data'];
+          
+          // Skip conditional groups (they'll be added inline after their trigger question)
+          // BUT: We must ensure they are eventually added. We'll check this later.
+          if (conditionalGroupIds.contains(group.id)) {
+            print('⏭️ Skipping conditional group ${group.id} (${group.name}) in main loop');
+            continue;
+          }
+          
           final fromMap = groupRepetitions?[group.id] ?? 0;
           final fromAnswers = _getMaxRepetitions(group.id, surveyAnswers);
           final maxRepetitions = fromMap > fromAnswers ? fromMap : fromAnswers;
-          //print('📊 Group ${group.id} (${group.name}): order=${group.order}, fromMap=$fromMap, fromAnswers=$fromAnswers, using maxRepetitions=$maxRepetitions');
-          //print('   Group has ${group.questions.length} questions');
           
           for (int i = 0; i < maxRepetitions; i++) {
             for (final question in group.questions) {
-              //print('   📋 Adding group question to header: ${question.id} - ${question.code} - ${question.text.substring(0, question.text.length > 30 ? 30 : question.text.length)}...');
+              if (question.id == 20906) {
+                print('👉 Processing Q20906 (الجنسية - الفرد) in instance $i');
+                final conds = questionToConditionalGroups[question.id];
+                print('   Has conditional groups? ${conds != null ? "YES (${conds.length})" : "NO"}');
+              }
+
               structure.add({
                 'type': 'group',
                 'text': '${question.code} (${i + 1})',
@@ -357,11 +335,33 @@ class ExcelExportServiceSyncfusion {
                 'questionId': question.id,
                 'instanceIndex': i,
               });
+              addedQuestionIds.add(question.id);
+              
+              // Add conditional groups after this question for this instance
+              final conditionalGroups = questionToConditionalGroups[question.id];
+              if (conditionalGroups != null) {
+                for (final condItem in conditionalGroups) {
+                  final condGroup = condItem['data'];
+                  print('   ✅ Adding conditional group ${condGroup.id} (${condGroup.name}) after Q${question.id} in instance $i');
+                  
+                  // Use the same instance index 'i' for the conditional group
+                  // This assumes conditional group repeats 1:1 with the trigger question
+                  for (final condQuestion in condGroup.questions) {
+                    structure.add({
+                      'type': 'group',
+                      'text': '${condQuestion.code} (${i + 1})',
+                      'fullText': '${condQuestion.text} (تكرار ${i + 1})',
+                      'questionId': condQuestion.id,
+                      'instanceIndex': i,
+                    });
+                    addedQuestionIds.add(condQuestion.id);
+                  }
+                }
+              }
             }
           }
         } else {
           final question = item['data'];
-          //print('📋 Adding direct question to header: ${question.id} - ${question.code} - order=${question.order} - ${question.text.substring(0, question.text.length > 30 ? 30 : question.text.length)}...');
           structure.add({
             'type': 'direct',
             'text': question.code,
@@ -369,6 +369,69 @@ class ExcelExportServiceSyncfusion {
             'questionId': question.id,
             'instanceIndex': null,
           });
+          addedQuestionIds.add(question.id);
+          
+          // Add conditional groups after direct questions
+          final conditionalGroups = questionToConditionalGroups[question.id];
+          if (conditionalGroups != null) {
+            for (final condItem in conditionalGroups) {
+              final condGroup = condItem['data'];
+              final fromMap = groupRepetitions?[condGroup.id] ?? 0;
+              final fromAnswers = _getMaxRepetitions(condGroup.id, surveyAnswers);
+              final maxRepetitions = fromMap > fromAnswers ? fromMap : fromAnswers;
+              
+              for (int i = 0; i < maxRepetitions; i++) {
+                for (final condQuestion in condGroup.questions) {
+                  structure.add({
+                    'type': 'group',
+                    'text': '${condQuestion.code} (${i + 1})',
+                    'fullText': '${condQuestion.text} (تكرار ${i + 1})',
+                    'questionId': condQuestion.id,
+                    'instanceIndex': i,
+                  });
+                  addedQuestionIds.add(condQuestion.id);
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      // SAFETY CHECK: Add any conditional groups that were NOT added inline
+      // This handles cases where the trigger question wasn't found or skipped
+      for (final item in items) {
+        if (item['type'] == 'group') {
+          final group = item['data'];
+          // Check if any question from this group is missing
+          bool isGroupMissing = false;
+          if (group.questions.isNotEmpty) {
+            // Just check the first question to see if the group was processed at all
+            if (!addedQuestionIds.contains(group.questions.first.id)) {
+              isGroupMissing = true;
+            }
+          }
+          
+          if (isGroupMissing && conditionalGroupIds.contains(group.id)) {
+            print('⚠️ FALLBACK: Adding missing conditional group ${group.id} (${group.name}) at the end');
+            
+            final fromMap = groupRepetitions?[group.id] ?? 0;
+            final fromAnswers = _getMaxRepetitions(group.id, surveyAnswers);
+            final maxRepetitions = fromMap > fromAnswers ? fromMap : fromAnswers;
+            // Ensure at least 1 repetition if we have data but 0 maxRepetitions calculated
+            final effectiveRepetitions = maxRepetitions == 0 && fromAnswers > 0 ? fromAnswers : maxRepetitions;
+            
+            for (int i = 0; i < effectiveRepetitions; i++) {
+              for (final question in group.questions) {
+                structure.add({
+                  'type': 'group',
+                  'text': '${question.code} (${i + 1})',
+                  'fullText': '${question.text} (تكرار ${i + 1})',
+                  'questionId': question.id,
+                  'instanceIndex': i,
+                });
+              }
+            }
+          }
         }
       }
     }
