@@ -492,7 +492,12 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
         if (relatedGroups != null && relatedGroups.isNotEmpty) {
           for (var relatedGroup in relatedGroups) {
             // CRITICAL: Only show the group if THIS question is the trigger
-            final isTriggering = viewModel.isQuestionTriggeringGroup(relatedGroup.id, question.id);
+            // For direct questions (not in a repeating group), groupInstanceId is null
+            final isTriggering = viewModel.isQuestionTriggeringGroup(
+              relatedGroup.id, 
+              question.id,
+              groupInstanceId: null,
+            );
             
             print('🔍 Q${question.id} → Group ${relatedGroup.id}: isTriggering=$isTriggering');
             
@@ -508,16 +513,16 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
     }
 
     // Add any remaining groups that weren't linked to questions
-    // BUT skip conditional groups (those with Show targetConditions) - they should only appear after their trigger question
+    // Skip conditional groups (Show/Repetition) - they should only appear after their trigger question
     for (var group in groups) {
       if (!addedGroupIds.contains(group.id)) {
-        // Check if this is a conditional "show" group
-        final hasShowCondition = group.targetConditions.any(
-          (c) => c.actionEnum == ConditionAction.show
+        // Check if this group has any conditions that link it to a source question
+        final hasTriggeredCondition = group.targetConditions.any(
+          (c) => c.actionEnum == ConditionAction.show || c.actionEnum == ConditionAction.repetition
         );
         
-        if (hasShowCondition) {
-          print('   ⏭️ Skipping conditional group ${group.id} in remaining groups (will be added by trigger question)');
+        if (hasTriggeredCondition) {
+          print('   ⏭️ Skipping triggered group ${group.id} in remaining groups (will be added by trigger question)');
           continue;
         }
         
@@ -812,24 +817,24 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Always show instance number for debugging
-              // Container(
-              //   padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-              //   margin: const EdgeInsets.symmetric(vertical: 4),
-              //   decoration: BoxDecoration(
-              //     color: Colors.orange.shade100,
-              //     borderRadius: BorderRadius.circular(8),
-              //     border: Border.all(color: Colors.orange.shade300),
-              //   ),
-              //   child: Text(
-              //     'التكرار ${instanceIndex + 1} من $repetitions',
-              //     style: TextStyle(
-              //       fontSize: 14,
-              //       fontWeight: FontWeight.bold,
-              //       color: Colors.orange.shade900,
-              //     ),
-              //   ),
-              // ),
+           //   Always show instance number for debugging
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade300),
+                ),
+                child: Text(
+                  'التكرار ${instanceIndex + 1} من $repetitions',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange.shade900,
+                  ),
+                ),
+              ),
               ...() {
                 final widgets = <Widget>[];
                 final questions = viewModel.getVisibleQuestions(group: group);
@@ -891,20 +896,22 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                   ));
                   
                   // Check if this question has related conditional groups
-                  // Only add on first instance to avoid duplicates
-                  if (instanceIndex == 0) {
-                    final relatedGroups = questionToRelatedGroups[question.id];
-                    if (relatedGroups != null && relatedGroups.isNotEmpty) {
-                      for (var relatedGroup in relatedGroups) {
-                        // CRITICAL: Only show the group if THIS question is the trigger
-                        final isTriggering = viewModel.isQuestionTriggeringGroup(relatedGroup.id, question.id);
-                        
-                        print('   🔍 [Inside Group ${group.id}] Q${question.id} → Group ${relatedGroup.id}: isTriggering=$isTriggering');
-                        
-                        if (isTriggering) {
-                          print('      ✅ Adding Group ${relatedGroup.id} after Q${question.id}');
-                          widgets.add(_buildQuestionGroup(relatedGroup, viewModel));
-                        }
+                  // Check for EACH instance separately using groupInstanceId
+                  final relatedGroups = questionToRelatedGroups[question.id];
+                  if (relatedGroups != null && relatedGroups.isNotEmpty) {
+                    for (var relatedGroup in relatedGroups) {
+                      // CRITICAL: Check if THIS question in THIS instance is triggering the group
+                      final isTriggering = viewModel.isQuestionTriggeringGroup(
+                        relatedGroup.id, 
+                        question.id,
+                        groupInstanceId: instanceIndex,
+                      );
+                      
+                      print('   🔍 [Inside Group ${group.id}, Instance $instanceIndex] Q${question.id} → Group ${relatedGroup.id}: isTriggering=$isTriggering');
+                      
+                      if (isTriggering) {
+                        print('      ✅ Adding Group ${relatedGroup.id} after Q${question.id} in instance $instanceIndex');
+                        widgets.add(_buildQuestionGroup(relatedGroup, viewModel));
                       }
                     }
                   }

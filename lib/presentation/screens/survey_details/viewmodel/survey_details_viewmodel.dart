@@ -891,9 +891,12 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     print('   🗑️ Cleared and saved $answersCount answers for group $groupId');
   }
 
-  dynamic _getAnswerValue(int questionId) {
+  dynamic _getAnswerValue(int questionId, {int? groupInstanceId}) {
+    // If groupInstanceId is provided, search for that specific instance
+    // If null, search for any instance of this question
     final answer = _surveyAnswers?.answers.firstWhere(
-      (a) => a.questionId == questionId,
+      (a) => a.questionId == questionId && 
+             (groupInstanceId == null || a.groupInstanceId == groupInstanceId),
       orElse: () => AnswerModel(
         questionId: questionId,
         questionCode: '',
@@ -902,7 +905,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       ),
     );
     final value = answer?.value;
-    print('      _getAnswerValue($questionId) = $value (type: ${value.runtimeType})');
+    print('      _getAnswerValue($questionId, instance=$groupInstanceId) = $value (type: ${value.runtimeType})');
     return value;
   }
 
@@ -929,34 +932,44 @@ class SurveyDetailsViewModel extends ChangeNotifier {
   }
 
   /// Checks if a specific question is currently triggering a conditional group
-  /// Returns true only if THIS question's answer meets the Show condition
-  bool isQuestionTriggeringGroup(int groupId, int questionId) {
+  /// Returns true if THIS question's answer meets any condition (Show or Repetition)
+  bool isQuestionTriggeringGroup(int groupId, int questionId, {int? groupInstanceId}) {
     final group = _findGroupById(groupId);
     if (group == null || group.targetConditions.isEmpty) {
       return false;
     }
     
-    // DON'T check isGroupVisible here!
-    // We want to know if THIS specific question is triggering the group,
-    // regardless of whether another question also triggers it.
-    
-    // Check if THIS question's answer meets a Show condition for this group
+    // Check if THIS question is the source for any condition of this group
     for (final condition in group.targetConditions) {
-      if (condition.actionEnum != ConditionAction.show) {
-        continue;
-      }
-      
       if (condition.sourceQuestionId != questionId) {
         continue;
       }
       
-      final answer = _getAnswerValue(questionId);
-      final isMet = _isConditionMet(answer, condition);
+      // Get answer for this specific instance
+      final answer = _getAnswerValue(questionId, groupInstanceId: groupInstanceId);
       
-      print('🔍 isQuestionTriggeringGroup: groupId=$groupId, questionId=$questionId, answer=$answer, isMet=$isMet');
-      
-      if (isMet) {
-        return true;
+      // For Show conditions: check if the condition is met
+      if (condition.actionEnum == ConditionAction.show) {
+        final isMet = _isConditionMet(answer, condition);
+        print('🔍 isQuestionTriggeringGroup (Show): groupId=$groupId, questionId=$questionId, instance=$groupInstanceId, answer=$answer, isMet=$isMet');
+        if (isMet) {
+          return true;
+        }
+      }
+      // For Repetition conditions: check if answer exists and > 0
+      else if (condition.actionEnum == ConditionAction.repetition) {
+        final hasValue = answer != null && answer.toString().isNotEmpty;
+        int? count;
+        if (answer is int) {
+          count = answer;
+        } else if (answer is String) {
+          count = int.tryParse(answer);
+        }
+        final shouldShow = hasValue && count != null && count > 0;
+        print('🔍 isQuestionTriggeringGroup (Repetition): groupId=$groupId, questionId=$questionId, instance=$groupInstanceId, answer=$answer, shouldShow=$shouldShow');
+        if (shouldShow) {
+          return true;
+        }
       }
     }
     
