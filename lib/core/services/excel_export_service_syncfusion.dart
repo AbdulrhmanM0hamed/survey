@@ -26,7 +26,7 @@ class ExcelExportServiceSyncfusion {
     required SurveyAnswersModel surveyAnswers,
     Map<int, int>? groupRepetitions,
   }) async {
-    //print('📊 Starting Syncfusion Excel export with images...');
+    ////print('📊 Starting Syncfusion Excel export with images...');
     try {
       // Request storage permission
       if (Platform.isAndroid) {
@@ -46,13 +46,13 @@ class ExcelExportServiceSyncfusion {
       final filePath = '${directory.path}/$fileName';
       final file = File(filePath);
       
-      //print('📁 Using file: $fileName');
-      //print('📍 Full path: $filePath');
+      ////print('📁 Using file: $fileName');
+      ////print('📍 Full path: $filePath');
 
       // Debug: Log all saved answers
-      //print('📋 All saved answers (${surveyAnswers.answers.length} total):');
+      ////print('📋 All saved answers (${surveyAnswers.answers.length} total):');
       for (final answer in surveyAnswers.answers) {
-        //print('   Q${answer.questionId} (${answer.questionCode}): ${answer.value} (${answer.value.runtimeType})');
+        ////print('   Q${answer.questionId} (${answer.questionCode}): ${answer.value} (${answer.value.runtimeType})');
       }
 
       // Build header structure FIRST
@@ -65,7 +65,7 @@ class ExcelExportServiceSyncfusion {
       Map<String, String> imageMap = {}; // Map of "row_col" -> base64
       
       if (await file.exists()) {
-        //print('📂 File exists, reading old data with old header structure...');
+        ////print('📂 File exists, reading old data with old header structure...');
         try {
           final bytes = await file.readAsBytes();
           final excel = ExcelPkg.Excel.decodeBytes(bytes);
@@ -79,7 +79,7 @@ class ExcelExportServiceSyncfusion {
               if (headerValue.isEmpty) break;
               oldHeaders.add(headerValue);
             }
-            //print('📊 Old file has ${oldHeaders.length} columns');
+            ////print('📊 Old file has ${oldHeaders.length} columns');
             
             // Read data rows mapped by old headers
             if (sheet.maxRows > 1) {
@@ -108,7 +108,7 @@ class ExcelExportServiceSyncfusion {
                           final base64Image = base64Encode(imageBytes);
                           // Map to new column position
                           imageMap['${existingData.length + 2}_${newHeaderIndex + 1}'] = base64Image;
-                          //print('📸 Found saved image: $imagePath');
+                          ////print('📸 Found saved image: $imagePath');
                         }
                       }
                     }
@@ -117,22 +117,22 @@ class ExcelExportServiceSyncfusion {
                 existingData.add(rowData);
               }
             }
-            //print('📊 Read ${existingData.length} existing rows with ${imageMap.length} images');
+            ////print('📊 Read ${existingData.length} existing rows with ${imageMap.length} images');
           }
         } catch (e) {
-          //print('⚠️ Could not read existing file: $e');
+          ////print('⚠️ Could not read existing file: $e');
         }
       }
 
       // Step 2: Create new Syncfusion workbook
-      //print('📝 Creating new Syncfusion workbook...');
+      ////print('📝 Creating new Syncfusion workbook...');
       final Workbook workbook = Workbook();
       final Worksheet worksheet = workbook.worksheets[0];
       worksheet.name = _sheetName;
       
       // Enable Right-to-Left (RTL) for Arabic text
       worksheet.isRightToLeft = true;
-      //print('✅ RTL mode enabled for Arabic text');
+      ////print('✅ RTL mode enabled for Arabic text');
 
       // Step 3: Add headers
       await _addHeadersSyncfusion(worksheet, survey, surveyAnswers);
@@ -152,7 +152,7 @@ class ExcelExportServiceSyncfusion {
           final imageKey = '${currentRow}_${col + 1}';
           if (imageMap.containsKey(imageKey)) {
             // Re-insert the image
-            //print('🖼️ Re-inserting image at row $currentRow, col ${col + 1}');
+            ////print('🖼️ Re-inserting image at row $currentRow, col ${col + 1}');
             await _insertImageToCell(worksheet, imageMap[imageKey]!, currentRow, col + 1);
           } else {
             // Regular text cell - use exact header match from old data
@@ -166,13 +166,13 @@ class ExcelExportServiceSyncfusion {
         }
         currentRow++;
       }
-      //print('📋 Added ${existingData.length} existing rows with ${imageMap.length} images, matched to new ${_headerStructure.length} columns');
+      ////print('📋 Added ${existingData.length} existing rows with ${imageMap.length} images, matched to new ${_headerStructure.length} columns');
 
       // Step 5: Add new survey response with images
       await _addSurveyResponseSyncfusion(worksheet, survey, surveyAnswers, currentRow, directory: directory);
 
       // Step 6: Save workbook
-      //print('💾 Saving workbook...');
+      ////print('💾 Saving workbook...');
       final List<int> bytes = workbook.saveAsStream();
       workbook.dispose();
       
@@ -181,14 +181,14 @@ class ExcelExportServiceSyncfusion {
       // Verify
       if (await file.exists()) {
         final fileSize = await file.length();
-        //print('✅ Excel file saved! Size: $fileSize bytes');
-        //print('📍 Location: ${file.path}');
+        ////print('✅ Excel file saved! Size: $fileSize bytes');
+        ////print('📍 Location: ${file.path}');
       }
       
       return filePath;
     } catch (e, stackTrace) {
-      //print('❌ Error exporting to Excel: $e');
-      //print('Stack trace: $stackTrace');
+      ////print('❌ Error exporting to Excel: $e');
+      ////print('Stack trace: $stackTrace');
       return null;
     }
   }
@@ -201,7 +201,7 @@ class ExcelExportServiceSyncfusion {
       if (!await directory.exists()) {
         await directory.create(recursive: true);
       }
-      //print('📁 Export directory: ${directory.path}');
+      ////print('📁 Export directory: ${directory.path}');
       return directory;
     } else {
       return await getApplicationDocumentsDirectory();
@@ -280,6 +280,14 @@ class ExcelExportServiceSyncfusion {
       for (final item in items) {
         if (item['type'] == 'group') {
           final group = item['data'];
+          
+          if (group.id == 110) {
+            //print('🔍 DEBUG: Found Group 110 in items list. Target conditions: ${group.targetConditions.length}');
+            for (final c in group.targetConditions) {
+               //print('   - Source Question ID: ${c.sourceQuestionId}');
+            }
+          }
+
           for (final condition in group.targetConditions) {
             if (condition.sourceQuestionId != null) {
               if (!questionToConditionalGroups.containsKey(condition.sourceQuestionId)) {
@@ -287,6 +295,7 @@ class ExcelExportServiceSyncfusion {
               }
               if (!questionToConditionalGroups[condition.sourceQuestionId]!.contains(item)) {
                 questionToConditionalGroups[condition.sourceQuestionId]!.add(item);
+                //print('🔗 Mapped Question ${condition.sourceQuestionId} -> Group ${group.id}');
               }
             }
           }
@@ -312,7 +321,7 @@ class ExcelExportServiceSyncfusion {
           // Skip conditional groups (they'll be added inline after their trigger question)
           // BUT: We must ensure they are eventually added. We'll check this later.
           if (conditionalGroupIds.contains(group.id)) {
-            print('⏭️ Skipping conditional group ${group.id} (${group.name}) in main loop');
+            //print('⏭️ Skipping conditional group ${group.id} (${group.name}) in main loop');
             continue;
           }
           
@@ -323,9 +332,9 @@ class ExcelExportServiceSyncfusion {
           for (int i = 0; i < maxRepetitions; i++) {
             for (final question in group.questions) {
               if (question.id == 20906) {
-                print('👉 Processing Q20906 (الجنسية - الفرد) in instance $i');
+                //print('👉 Processing Q20906 (الجنسية - الفرد) in instance $i');
                 final conds = questionToConditionalGroups[question.id];
-                print('   Has conditional groups? ${conds != null ? "YES (${conds.length})" : "NO"}');
+                //print('   Has conditional groups? ${conds != null ? "YES (${conds.length})" : "NO"}');
               }
 
               structure.add({
@@ -342,7 +351,7 @@ class ExcelExportServiceSyncfusion {
               if (conditionalGroups != null) {
                 for (final condItem in conditionalGroups) {
                   final condGroup = condItem['data'];
-                  print('   ✅ Adding conditional group ${condGroup.id} (${condGroup.name}) after Q${question.id} in instance $i');
+                  //print('   ✅ Adding conditional group ${condGroup.id} (${condGroup.name}) after Q${question.id} in instance $i');
                   
                   // Use the same instance index 'i' for the conditional group
                   // This assumes conditional group repeats 1:1 with the trigger question
@@ -376,6 +385,8 @@ class ExcelExportServiceSyncfusion {
           if (conditionalGroups != null) {
             for (final condItem in conditionalGroups) {
               final condGroup = condItem['data'];
+              //print('   ✅ Adding conditional group ${condGroup.id} (${condGroup.name}) after Direct Q${question.id}');
+              
               final fromMap = groupRepetitions?[condGroup.id] ?? 0;
               final fromAnswers = _getMaxRepetitions(condGroup.id, surveyAnswers);
               final maxRepetitions = fromMap > fromAnswers ? fromMap : fromAnswers;
@@ -412,13 +423,17 @@ class ExcelExportServiceSyncfusion {
           }
           
           if (isGroupMissing && conditionalGroupIds.contains(group.id)) {
-            print('⚠️ FALLBACK: Adding missing conditional group ${group.id} (${group.name}) at the end');
+            //print('⚠️ FALLBACK: Adding missing conditional group ${group.id} (${group.name}) at the end');
             
             final fromMap = groupRepetitions?[group.id] ?? 0;
             final fromAnswers = _getMaxRepetitions(group.id, surveyAnswers);
             final maxRepetitions = fromMap > fromAnswers ? fromMap : fromAnswers;
-            // Ensure at least 1 repetition if we have data but 0 maxRepetitions calculated
-            final effectiveRepetitions = maxRepetitions == 0 && fromAnswers > 0 ? fromAnswers : maxRepetitions;
+            
+            // FORCE at least 1 repetition if it's missing and conditional
+            // This ensures the column appears in Excel even if visible=false or 0 reps
+            final effectiveRepetitions = maxRepetitions > 0 ? maxRepetitions : 1;
+            
+            //print('   👉 Forcing $effectiveRepetitions repetition(s) for group ${group.id}');
             
             for (int i = 0; i < effectiveRepetitions; i++) {
               for (final question in group.questions) {
@@ -444,13 +459,13 @@ class ExcelExportServiceSyncfusion {
       // For groups with no answers, check if there are any repetitions set in the system
       // This should be coordinated with the ViewModel's _groupRepetitions
       // For now, return 0 for groups that have no saved answers
-      //print('📊 Group $groupId has no saved answers, returning 0 repetitions');
+      ////print('📊 Group $groupId has no saved answers, returning 0 repetitions');
       return 0;
     }
     
     final maxInstance = groupAnswers.map((a) => a.groupInstanceId ?? 0).reduce((a, b) => a > b ? a : b);
     final result = maxInstance + 1;
-    //print('📊 Group $groupId has $result repetitions based on saved answers');
+    ////print('📊 Group $groupId has $result repetitions based on saved answers');
     return result;
   }
 
@@ -505,8 +520,8 @@ class ExcelExportServiceSyncfusion {
     }
     
     if (question != null && question.choices.isNotEmpty) {
-      //print('🔍 Formatting value: "$value" for question ${question.id}');
-      //print('   Available choices: ${question.choices.map((c) => '${c.code}="${c.label}"').join(', ')}');
+      ////print('🔍 Formatting value: "$value" for question ${question.id}');
+      ////print('   Available choices: ${question.choices.map((c) => '${c.code}="${c.label}"').join(', ')}');
       
       if (value is List) {
         return value.map((v) {
@@ -516,7 +531,7 @@ class ExcelExportServiceSyncfusion {
             choice = question.choices.where((c) => c.id.toString() == v.toString()).firstOrNull;
           }
           final result = choice?.label ?? v.toString();
-          //print('   Matched "$v" → "$result"');
+          ////print('   Matched "$v" → "$result"');
           return result;
         }).join(', ');
       } else {
@@ -526,7 +541,7 @@ class ExcelExportServiceSyncfusion {
           choice = question.choices.where((c) => c.id.toString() == value.toString()).firstOrNull;
         }
         final result = choice?.label ?? value.toString();
-        //print('   Matched "$value" → "$result"');
+        ////print('   Matched "$value" → "$result"');
         return result;
       }
     }
@@ -561,7 +576,7 @@ class ExcelExportServiceSyncfusion {
     int rowIndex,
     {required Directory directory}
   ) async {
-    //print('➕ Adding new response at row $rowIndex');
+    ////print('➕ Adding new response at row $rowIndex');
 
     for (int colIndex = 0; colIndex < _headerStructure.length; colIndex++) {
       final header = _headerStructure[colIndex];
@@ -591,18 +606,18 @@ class ExcelExportServiceSyncfusion {
             break;
           case 'اسم الحى / القرية':
             cellValue = surveyAnswers.neighborhoodName ?? '';
-            if (cellValue.isNotEmpty) //print('🏘️ Writing Neighborhood: $cellValue');
+            if (cellValue.isNotEmpty) ////print('🏘️ Writing Neighborhood: $cellValue');
             break;
           case 'اسم الشارع':
             cellValue = surveyAnswers.streetName ?? '';
             break;
           case 'خط العرض (Latitude)':
             cellValue = surveyAnswers.latitude?.toString() ?? '';
-            if (cellValue.isNotEmpty) //print('🌍 Writing Latitude: $cellValue');
+            if (cellValue.isNotEmpty) ////print('🌍 Writing Latitude: $cellValue');
             break;
           case 'خط الطول (Longitude)':
             cellValue = surveyAnswers.longitude?.toString() ?? '';
-            if (cellValue.isNotEmpty) //print('🌍 Writing Longitude: $cellValue');
+            if (cellValue.isNotEmpty) ////print('🌍 Writing Longitude: $cellValue');
             break;
           case 'قبول المشاركة':
             cellValue = surveyAnswers.isApproved == null 
@@ -641,14 +656,14 @@ class ExcelExportServiceSyncfusion {
           ),
         );
         
-        //print('🔍 Processing question $questionId (instance: $instanceIndex): answer value = ${answer.value}');
+        ////print('🔍 Processing question $questionId (instance: $instanceIndex): answer value = ${answer.value}');
 
         if (answer.value != null && answer.value.toString().isNotEmpty) {
           final question = _findQuestion(survey, questionId);
           
           // Debug: Log question type
           if (question != null) {
-            //print('🔍 Question ID: ${question.id}, Type: "${question.type}", Value length: ${answer.value.toString().length}');
+            ////print('🔍 Question ID: ${question.id}, Type: "${question.type}", Value length: ${answer.value.toString().length}');
           }
           
           // Check if this is an image question (type can be 'image' or 9)
@@ -659,7 +674,7 @@ class ExcelExportServiceSyncfusion {
                answer.value.toString().startsWith('data:image'));
           
           if (isImageQuestion) {
-            //print('🖼️ Detected image question! Inserting image...');
+            ////print('🖼️ Detected image question! Inserting image...');
             
             // Save image as file for future re-insertion
             final imagesDir = Directory('${directory.path}/survey_${survey.id}_images');
@@ -679,9 +694,9 @@ class ExcelExportServiceSyncfusion {
               pureBase64 = pureBase64.replaceAll(RegExp(r'\s+'), '');
               final imageBytes = base64Decode(pureBase64);
               await File(imagePath).writeAsBytes(imageBytes);
-              //print('💾 Saved image for future use: $imagePath');
+              ////print('💾 Saved image for future use: $imagePath');
             } catch (e) {
-              //print('❌ Failed to save image file: $e');
+              ////print('❌ Failed to save image file: $e');
             }
             
             // Insert actual image!
@@ -699,7 +714,7 @@ class ExcelExportServiceSyncfusion {
   /// Insert image into Excel cell using Syncfusion
   Future<void> _insertImageToCell(Worksheet worksheet, String base64String, int row, int col) async {
     try {
-      //print('🖼️ Inserting image at row $row, col $col');
+      ////print('🖼️ Inserting image at row $row, col $col');
       
       // Remove data URI prefix if present
       String pureBase64 = base64String;
@@ -715,7 +730,7 @@ class ExcelExportServiceSyncfusion {
       
       // Decode to Uint8List
       final Uint8List imageBytes = base64Decode(pureBase64);
-      //print('📦 Image size: ${imageBytes.length} bytes');
+      ////print('📦 Image size: ${imageBytes.length} bytes');
       
       // Set cell size for image
       worksheet.setRowHeightInPixels(row, 100);
@@ -726,9 +741,9 @@ class ExcelExportServiceSyncfusion {
       picture.height = 95;
       picture.width = 115;
       
-      //print('✅ Image inserted successfully');
+      ////print('✅ Image inserted successfully');
     } catch (e) {
-      //print('❌ Failed to insert image: $e');
+      ////print('❌ Failed to insert image: $e');
       // Fallback: show error in cell
       final cell = worksheet.getRangeByIndex(row, col);
       cell.setText('[Image Error: $e]');
@@ -761,7 +776,7 @@ class ExcelExportServiceSyncfusion {
     Directory directory,
   ) async {
     final rowIndex = sheet.maxRows;
-    //print('➕ Adding new response at row $rowIndex');
+    ////print('➕ Adding new response at row $rowIndex');
 
     for (int colIndex = 0; colIndex < _headerStructure.length; colIndex++) {
       final header = _headerStructure[colIndex];
@@ -790,18 +805,18 @@ class ExcelExportServiceSyncfusion {
             break;
           case 'اسم الحى / القرية':
             cellValue = surveyAnswers.neighborhoodName ?? '';
-            if (cellValue.isNotEmpty) //print('🏘️ Writing Neighborhood: $cellValue');
+            if (cellValue.isNotEmpty) ////print('🏘️ Writing Neighborhood: $cellValue');
             break;
           case 'اسم الشارع':
             cellValue = surveyAnswers.streetName ?? '';
             break;
           case 'خط العرض (Latitude)':
             cellValue = surveyAnswers.latitude?.toString() ?? '';
-            if (cellValue.isNotEmpty) //print('🌍 Writing Latitude: $cellValue');
+            if (cellValue.isNotEmpty) ////print('🌍 Writing Latitude: $cellValue');
             break;
           case 'خط الطول (Longitude)':
             cellValue = surveyAnswers.longitude?.toString() ?? '';
-            if (cellValue.isNotEmpty) //print('🌍 Writing Longitude: $cellValue');
+            if (cellValue.isNotEmpty) ////print('🌍 Writing Longitude: $cellValue');
             break;
           case 'قبول المشاركة':
             cellValue = surveyAnswers.isApproved == null 
@@ -888,10 +903,10 @@ class ExcelExportServiceSyncfusion {
       final imageBytes = base64Decode(pureBase64);
       final imagePath = '${imagesDir.path}/Q${questionId}_${instanceIndex}.jpg';
       await File(imagePath).writeAsBytes(imageBytes);
-      //print('📸 Saved image: $imagePath');
+      ////print('📸 Saved image: $imagePath');
       return imagePath;
     } catch (e) {
-      //print('❌ Failed to save image: $e');
+      ////print('❌ Failed to save image: $e');
       return null;
     }
   }
@@ -932,17 +947,17 @@ class ExcelExportServiceSyncfusion {
               final imagePath = '${imagesDir.path}/Q${question.id}_${answer.groupInstanceId ?? 0}.jpg';
               await File(imagePath).writeAsBytes(imageBytes);
               imageCount++;
-              //print('📸 Saved image: $imagePath');
+              ////print('📸 Saved image: $imagePath');
             } catch (e) {
-              //print('⚠️ Failed to save image for Q${question.id}: $e');
+              ////print('⚠️ Failed to save image for Q${question.id}: $e');
             }
           }
         }
       }
       
-      //print('✅ Saved $imageCount images to ${imagesDir.path}');
+      ////print('✅ Saved $imageCount images to ${imagesDir.path}');
     } catch (e) {
-      //print('❌ Error saving images: $e');
+      ////print('❌ Error saving images: $e');
     }
   }
 
@@ -954,7 +969,7 @@ class ExcelExportServiceSyncfusion {
         text: 'ملف Excel للاستبيان',
       );
     } catch (e) {
-      //print('❌ Error sharing file: $e');
+      ////print('❌ Error sharing file: $e');
     }
   }
 
@@ -976,7 +991,7 @@ class ExcelExportServiceSyncfusion {
       }
       return null;
     } catch (e) {
-      //print('❌ Error getting file info: $e');
+      ////print('❌ Error getting file info: $e');
       return null;
     }
   }

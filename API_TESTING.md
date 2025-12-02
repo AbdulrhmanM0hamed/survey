@@ -244,7 +244,7 @@ GET http://45.94.209.137:8080/api/Surveys/10/exportData
 **الحل:**
 1. تحقق أن السؤال من نوع `Integer`
 2. تحقق أن `_groupRepetitions` يتحدث
-3. أضف `//print` في `getGroupRepetitions`
+3. أضف `////print` في `getGroupRepetitions`
 
 ### المشكلة: الواجهة لا تتحدث
 

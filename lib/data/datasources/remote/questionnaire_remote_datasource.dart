@@ -13,37 +13,37 @@ class QuestionnaireRemoteDataSourceImpl implements QuestionnaireRemoteDataSource
   @override
   Future<bool> submitQuestionnaire(Map<String, dynamic> questionnaireData) async {
     try {
-      //print('📤 Submitting questionnaire to API...');
-      //print('Data: ${questionnaireData}');
+      ////print('📤 Submitting questionnaire to API...');
+      ////print('Data: ${questionnaireData}');
       
-      // //print main data
-      //print('📊 Survey Data:');
-      //print('  surveyId: ${questionnaireData['surveyId']}');
-      //print('  householdCode: ${questionnaireData['householdCode']}');
-      //print('  managementInformationIds: ${questionnaireData['managementInformationIds']}');
-      //print('  isApproved: ${questionnaireData['isApproved']}');
-      //print('  rejectReason: "${questionnaireData['rejectReason']}"');
-      //print('  startAt: ${questionnaireData['startAt']}');
-      //print('  endAt: ${questionnaireData['endAt']}');
-      //print('  status: ${questionnaireData['status']}');
-      //print('  answers count: ${(questionnaireData['answers'] as List).length}');
+      // ////print main data
+      ////print('📊 Survey Data:');
+      ////print('  surveyId: ${questionnaireData['surveyId']}');
+      ////print('  householdCode: ${questionnaireData['householdCode']}');
+      ////print('  managementInformationIds: ${questionnaireData['managementInformationIds']}');
+      ////print('  isApproved: ${questionnaireData['isApproved']}');
+      ////print('  rejectReason: "${questionnaireData['rejectReason']}"');
+      ////print('  startAt: ${questionnaireData['startAt']}');
+      ////print('  endAt: ${questionnaireData['endAt']}');
+      ////print('  status: ${questionnaireData['status']}');
+      ////print('  answers count: ${(questionnaireData['answers'] as List).length}');
       
-      // //print each answer separately
-      //print('\n📝 Answers:');
+      // ////print each answer separately
+      ////print('\n📝 Answers:');
       final answers = questionnaireData['answers'] as List;
       for (var i = 0; i < answers.length; i++) {
         final answer = answers[i];
-        //print('  Answer ${i + 1}:');
-        //print('    questionId: ${answer['questionId']}');
-        //print('    questionType: ${answer['questionType']}');
-        //print('    groupId: ${answer['groupId']}');
-        //print('    repeatIndex: ${answer['repeatIndex']}');
-        //print('    valueText: ${answer['valueText']}');
-        //print('    valueNumber: ${answer['valueNumber']}');
-        //print('    imageBase64: ${answer['imageBase64'] != null ? (answer['imageBase64'].toString().length > 50 ? "${answer['imageBase64'].toString().substring(0, 50)}..." : answer['imageBase64']) : "null"}');
-        //print('    selectedChoices: ${answer['selectedChoices']}');
+        ////print('  Answer ${i + 1}:');
+        ////print('    questionId: ${answer['questionId']}');
+        ////print('    questionType: ${answer['questionType']}');
+        ////print('    groupId: ${answer['groupId']}');
+        ////print('    repeatIndex: ${answer['repeatIndex']}');
+        ////print('    valueText: ${answer['valueText']}');
+        ////print('    valueNumber: ${answer['valueNumber']}');
+        ////print('    imageBase64: ${answer['imageBase64'] != null ? (answer['imageBase64'].toString().length > 50 ? "${answer['imageBase64'].toString().substring(0, 50)}..." : answer['imageBase64']) : "null"}');
+        ////print('    selectedChoices: ${answer['selectedChoices']}');
       }
-      //print('\n');
+      ////print('\n');
 
       final response = await dio.post(
         '/Questionnaire/save',
@@ -51,8 +51,8 @@ class QuestionnaireRemoteDataSourceImpl implements QuestionnaireRemoteDataSource
       );
 
       if (response.statusCode == 200) {
-        //print('✅ Questionnaire submitted successfully');
-        //print('📥 API Response: ${response.data}');
+        ////print('✅ Questionnaire submitted successfully');
+        ////print('📥 API Response: ${response.data}');
         
         // Check if response has errors
         if (response.data != null && response.data is Map) {
@@ -60,28 +60,28 @@ class QuestionnaireRemoteDataSourceImpl implements QuestionnaireRemoteDataSource
           final errorMessage = response.data['errorMessage'];
           
           if (errorCode != null && errorCode != 0) {
-            //print('⚠️ API returned error: $errorMessage');
+            ////print('⚠️ API returned error: $errorMessage');
           }
           
           if (errorMessage != null && errorMessage.toString().isNotEmpty) {
-            //print('⚠️ API validation message: $errorMessage');
+            ////print('⚠️ API validation message: $errorMessage');
           }
         }
         
         return true;
       }
 
-      //print('⚠️ Unexpected status code: ${response.statusCode}');
+      ////print('⚠️ Unexpected status code: ${response.statusCode}');
       return false;
     } on DioException catch (e) {
-      //print('❌ Error submitting questionnaire: ${e.message}');
+      ////print('❌ Error submitting questionnaire: ${e.message}');
       if (e.response != null) {
-        //print('Response data: ${e.response?.data}');
-        //print('Response status: ${e.response?.statusCode}');
+        ////print('Response data: ${e.response?.data}');
+        ////print('Response status: ${e.response?.statusCode}');
       }
       throw Exception('Failed to submit questionnaire: ${e.message}');
     } catch (e) {
-      //print('❌ Unexpected error: $e');
+      ////print('❌ Unexpected error: $e');
       throw Exception('Failed to submit questionnaire: $e');
     }
   }
@@ -162,11 +162,11 @@ class QuestionnaireRemoteDataSourceImpl implements QuestionnaireRemoteDataSource
         // Legacy support: convert bool to text (should not happen with new code)
         final bool yesNo = answer.value as bool;
         answerMap["valueCode"] = yesNo ? "نعم" : "لا";
-        //print('⚠️ WARNING: YesNo question ${answer.questionId} has legacy bool value instead of choiceId');
+        ////print('⚠️ WARNING: YesNo question ${answer.questionId} has legacy bool value instead of choiceId');
       } else {
         // Unknown format
         answerMap["valueCode"] = answer.value.toString();
-        //print('⚠️ WARNING: YesNo question ${answer.questionId} has unexpected value type: ${answer.value.runtimeType}');
+        ////print('⚠️ WARNING: YesNo question ${answer.questionId} has unexpected value type: ${answer.value.runtimeType}');
       }
     } else if (qType == 4 || qType == 5) {
       // SingleChoice, MultiChoice

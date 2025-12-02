@@ -385,31 +385,37 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () {
-                            // Validate current section before proceeding
-                            if (!_validateCurrentSection(
-                              sections[_currentSectionIndex],
-                              viewModel,
-                            )) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'يرجى ملء جميع الحقول المطلوبة قبل المتابعة',
+                            // Unfocus to save any pending TextField values
+                            FocusScope.of(context).unfocus();
+                            
+                            // Wait a bit for TextField to save its value
+                            Future.delayed(const Duration(milliseconds: 100), () {
+                              // Validate current section before proceeding
+                              if (!_validateCurrentSection(
+                                sections[_currentSectionIndex],
+                                viewModel,
+                              )) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'يرجى ملء جميع الحقول المطلوبة قبل المتابعة',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                    duration: Duration(seconds: 2),
                                   ),
-                                  backgroundColor: Colors.red,
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                              return;
-                            }
+                                );
+                                return;
+                              }
 
-                            if (_currentSectionIndex < sections.length - 1) {
-                              _pageController.nextPage(
-                                duration: const Duration(milliseconds: 300),
-                                curve: Curves.easeInOut,
-                              );
-                            } else {
-                              _showCompletionDialog(context, viewModel);
-                            }
+                              if (_currentSectionIndex < sections.length - 1) {
+                                _pageController.nextPage(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                );
+                              } else {
+                                _showCompletionDialog(context, viewModel);
+                              }
+                            });
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Color(0xff25935F),
@@ -499,10 +505,10 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
               groupInstanceId: null,
             );
             
-            print('🔍 Q${question.id} → Group ${relatedGroup.id}: isTriggering=$isTriggering');
+            //print('🔍 Q${question.id} → Group ${relatedGroup.id}: isTriggering=$isTriggering');
             
             if (isTriggering) {
-              print('   ✅ Adding Group ${relatedGroup.id} after Q${question.id}');
+              //print('   ✅ Adding Group ${relatedGroup.id} after Q${question.id}');
               regularWidgets.add(_buildQuestionGroup(relatedGroup, viewModel));
               addedGroupIds.add(relatedGroup.id);
               groups.remove(relatedGroup);
@@ -522,7 +528,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
         );
         
         if (hasTriggeredCondition) {
-          print('   ⏭️ Skipping triggered group ${group.id} in remaining groups (will be added by trigger question)');
+          //print('   ⏭️ Skipping triggered group ${group.id} in remaining groups (will be added by trigger question)');
           continue;
         }
         
@@ -646,7 +652,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                           value: value,
                         );
                       } catch (e) {
-                        //print('❌ ERROR in saveAnswer: $e');
+                        ////print('❌ ERROR in saveAnswer: $e');
                       }
                     },
                     isRequired: viewModel.isQuestionRequired(question.id),
@@ -679,16 +685,16 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           initialValue: answer?.value,
           onChanged: (value) async {
             try {
-              //print('🔴 Direct Question callback: questionId=${question.id}, code=${question.code}, value=$value',);
-              //print('   Calling viewModel.saveAnswer...');
+              ////print('🔴 Direct Question callback: questionId=${question.id}, code=${question.code}, value=$value',);
+              ////print('   Calling viewModel.saveAnswer...');
               await viewModel.saveAnswer(
                 questionId: question.id,
                 questionCode: question.code,
                 value: value,
               );
-              //print('   saveAnswer completed successfully');
+              ////print('   saveAnswer completed successfully');
             } catch (e) {
-              //print('❌ ERROR in saveAnswer: $e');
+              ////print('❌ ERROR in saveAnswer: $e');
             }
           },
           isRequired: viewModel.isQuestionRequired(question.id),
@@ -744,7 +750,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
     int? parentInstanceId,
   }) {
     final repetitions = viewModel.getGroupRepetitions(group.id);
-    print('🎨 Building group ${group.id} (${group.name}) with $repetitions repetitions, parentInstance=$parentInstanceId');
+    //print('🎨 Building group ${group.id} (${group.name}) with $repetitions repetitions, parentInstance=$parentInstanceId');
     
     // Get all groups in this section to check for related conditional groups
     final section = viewModel.visibleSections.firstWhere(
@@ -812,7 +818,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           // ),
         ],
         ...List.generate(repetitions, (instanceIndex) {
-          //print('   📝 Generating instance $instanceIndex for group ${group.id}',);
+          ////print('   📝 Generating instance $instanceIndex for group ${group.id}',);
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -883,7 +889,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                     initialValue: initialValue,
                     onChanged: (value) async {
                       try {
-                        print('🔵 QuestionWidget callback: questionId=${question.id}, code=${question.code}, value=$value, effectiveInstance=$effectiveInstanceId');
+                        //print('🔵 QuestionWidget callback: questionId=${question.id}, code=${question.code}, value=$value, effectiveInstance=$effectiveInstanceId');
                         await viewModel.saveAnswer(
                           questionId: question.id,
                           questionCode: question.code,
@@ -891,7 +897,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                           groupInstanceId: effectiveInstanceId,
                         );
                       } catch (e) {
-                        print('❌ ERROR in saveAnswer: $e');
+                        //print('❌ ERROR in saveAnswer: $e');
                       }
                     },
                     isRequired: viewModel.isQuestionRequired(question.id),
@@ -909,10 +915,10 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                         groupInstanceId: effectiveInstanceId,
                       );
                       
-                      print('   🔍 [Inside Group ${group.id}, Instance $instanceIndex, Effective $effectiveInstanceId] Q${question.id} → Group ${relatedGroup.id}: isTriggering=$isTriggering');
+                      //print('   🔍 [Inside Group ${group.id}, Instance $instanceIndex, Effective $effectiveInstanceId] Q${question.id} → Group ${relatedGroup.id}: isTriggering=$isTriggering');
                       
                       if (isTriggering) {
-                        print('      ✅ Adding Group ${relatedGroup.id} after Q${question.id} with parentInstance=$instanceIndex');
+                        //print('      ✅ Adding Group ${relatedGroup.id} after Q${question.id} with parentInstance=$instanceIndex');
                         widgets.add(_buildQuestionGroup(relatedGroup, viewModel, parentInstanceId: instanceIndex));
                       }
                     }
@@ -934,12 +940,28 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
   ) {
     // Get all required questions in the current section
     List<int> missingQuestions = [];
+    print('\n🔍 VALIDATION: Section ${section.id}');
 
     // Check questions in groups
     for (final group in section.questionGroups) {
-      if (!viewModel.isGroupVisible(group.id)) continue;
+      if (!viewModel.isGroupVisible(group.id)) {
+        print('   ⏭️ Skipping Group ${group.id} (hidden)');
+        continue;
+      }
 
       final repetitions = viewModel.getGroupRepetitions(group.id);
+      
+      // Count visible questions in this group
+      int visibleQuestionsCount = 0;
+      int requiredQuestionsCount = 0;
+      for (final q in group.questions) {
+        if (viewModel.isQuestionVisible(q.id)) {
+          visibleQuestionsCount++;
+          if (viewModel.isQuestionRequired(q.id)) requiredQuestionsCount++;
+        }
+      }
+      
+      print('   📦 Checking Group ${group.id}: visible=true, repetitions=$repetitions, visibleQuestions=$visibleQuestionsCount, requiredQuestions=$requiredQuestionsCount');
 
       for (
         int instanceIndex = 0;
@@ -947,7 +969,10 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
         instanceIndex++
       ) {
         for (final question in group.questions) {
-          if (!viewModel.isQuestionVisible(question.id)) continue;
+          if (!viewModel.isQuestionVisible(question.id)) {
+            print('      ⏭️ Q${question.id} (${question.code}): HIDDEN - skipped');
+            continue;
+          }
           if (!viewModel.isQuestionRequired(question.id)) continue;
 
           // Check if answer exists for this question
@@ -982,6 +1007,14 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           }
 
           if (isAnswerMissing) {
+            print('      ❌ Q${question.id} (${question.code}): REQUIRED but EMPTY');
+            if (question.id == 21005) {
+              print('         🔍 SPECIAL DEBUG Q21005:');
+              print('            - isVisible: ${viewModel.isQuestionVisible(21005)}');
+              print('            - isRequired: ${viewModel.isQuestionRequired(21005)}');
+              print('            - answer value: ${answer?.value}');
+              print('            - question text: ${question.text}');
+            }
             missingQuestions.add(question.id);
           }
         }
@@ -1025,6 +1058,11 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
       }
     }
 
+    if (missingQuestions.isEmpty) {
+      print('✅ VALIDATION PASSED - All required fields filled\n');
+    } else {
+      print('❌ VALIDATION FAILED - Missing ${missingQuestions.length} required questions: $missingQuestions\n');
+    }
     return missingQuestions.isEmpty;
   }
 
@@ -1134,22 +1172,22 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
               );
 
               try {
-                //print('🎯 Starting export from UI...');
+                ////print('🎯 Starting export from UI...');
                 final filePath = await viewModel.exportToExcel();
-                //print('✅ Export completed, filePath: $filePath');
+                ////print('✅ Export completed, filePath: $filePath');
 
-                //print('🔄 Closing loading dialog...');
+                ////print('🔄 Closing loading dialog...');
                 navigator.pop(); // Close loading using saved navigator
-                //print('✅ Loading dialog closed');
+                ////print('✅ Loading dialog closed');
 
                 if (filePath != null) {
-                  //print('📋 Showing success dialog...');
+                  ////print('📋 Showing success dialog...');
                   if (mounted) {
                     try {
                       _showExportSuccessDialog(context, viewModel, filePath);
                     } catch (e) {
-                      //print('❌ Error showing success dialog: $e');
-                      //print('⚠️ Showing snackbar instead');
+                      ////print('❌ Error showing success dialog: $e');
+                      ////print('⚠️ Showing snackbar instead');
                       scaffoldMessenger.showSnackBar(
                         SnackBar(
                           content: Text('تم التصدير بنجاح: $filePath'),
@@ -1166,7 +1204,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                       );
                     }
                   } else {
-                    //print('⚠️ Widget not mounted, showing snackbar instead');
+                    ////print('⚠️ Widget not mounted, showing snackbar instead');
                     scaffoldMessenger.showSnackBar(
                       SnackBar(
                         content: Text('تم التصدير بنجاح: $filePath'),
@@ -1177,7 +1215,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                   }
                 }
               } catch (e) {
-                //print('❌ Export error: $e');
+                ////print('❌ Export error: $e');
                 navigator.pop(); // Close loading using saved navigator
 
                 // Show error message
@@ -1266,16 +1304,16 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
               );
 
               try {
-                //print('🎯 Starting export and clear from UI...');
+                ////print('🎯 Starting export and clear from UI...');
                 final result = await viewModel.exportAndClearLocalData();
-                //print('✅ Export and clear completed: $result');
+                ////print('✅ Export and clear completed: $result');
 
-                //print('🔄 Closing loading dialog...');
+                ////print('🔄 Closing loading dialog...');
                 navigator.pop(); // Close loading using saved navigator
-                //print('✅ Loading dialog closed');
+                ////print('✅ Loading dialog closed');
 
                 if (!mounted) {
-                  //print('⚠️ Widget not mounted, showing snackbar instead');
+                  ////print('⚠️ Widget not mounted, showing snackbar instead');
                   scaffoldMessenger.showSnackBar(
                     SnackBar(
                       content: Text(
@@ -1288,7 +1326,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                   return;
                 }
 
-                //print('📋 Showing success dialog...');
+                ////print('📋 Showing success dialog...');
                 // Show success
                 try {
                   showDialog(
@@ -1349,8 +1387,8 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                     ),
                   );
                 } catch (e) {
-                  //print('❌ Error showing success dialog: $e');
-                  //print('⚠️ Showing snackbar instead');
+                  ////print('❌ Error showing success dialog: $e');
+                  ////print('⚠️ Showing snackbar instead');
                   scaffoldMessenger.showSnackBar(
                     SnackBar(
                       content: Text(
@@ -1362,7 +1400,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                   );
                 }
               } catch (e) {
-                //print('❌ Export and clear error: $e');
+                ////print('❌ Export and clear error: $e');
                 navigator.pop(); // Close loading using saved navigator
 
                 scaffoldMessenger.showSnackBar(

@@ -21,7 +21,7 @@ class ExcelExportService {
     required SurveyModel survey,
     required SurveyAnswersModel surveyAnswers,
   }) async {
-    //print('📊 Starting Excel export...');
+    ////print('📊 Starting Excel export...');
     try {
       // Request storage permission
       if (Platform.isAndroid) {
@@ -40,25 +40,25 @@ class ExcelExportService {
       final filePath = '${directory.path}/$fileName';
       final file = File(filePath);
       
-      //print('📁 Using file: $fileName');
+      ////print('📁 Using file: $fileName');
 
       Excel excel;
       Sheet sheet;
 
       // Check if file exists
       if (await file.exists()) {
-        //print('📂 File exists, loading and appending...');
+        ////print('📂 File exists, loading and appending...');
         // Load existing file
         final bytes = await file.readAsBytes();
         excel = Excel.decodeBytes(bytes);
         sheet = excel.sheets[excel.getDefaultSheet()]!;
         
-        //print('📊 Current rows in file: ${sheet.maxRows}');
+        ////print('📊 Current rows in file: ${sheet.maxRows}');
         
         // Check if file has data and correct structure
         if (sheet.maxRows == 0) {
           // Empty file - just add headers
-          //print('📄 File is empty, adding headers...');
+          ////print('📄 File is empty, adding headers...');
           _addHeaders(sheet, survey, surveyAnswers);
         } else {
           // File has data - check structure
@@ -67,10 +67,10 @@ class ExcelExportService {
           
           if (!hasCorrectStructure) {
             // Old structure detected - backup and recreate
-            //print('⚠️ Old Excel structure detected. Creating backup and new file...');
+            ////print('⚠️ Old Excel structure detected. Creating backup and new file...');
             final backupPath = '${directory.path}/${fileName.replaceAll('.xlsx', '')}_backup_${DateTime.now().millisecondsSinceEpoch}.xlsx';
             await file.copy(backupPath);
-            //print('✅ Backup created: $backupPath');
+            ////print('✅ Backup created: $backupPath');
             
             // Delete old file and create new one
             await file.delete();
@@ -86,12 +86,12 @@ class ExcelExportService {
             _addHeaders(sheet, survey, surveyAnswers);
           } else {
             // Compatible structure - check if we need to expand headers
-            //print('✅ Compatible structure found, checking for header expansion...');
+            ////print('✅ Compatible structure found, checking for header expansion...');
             _expandHeadersIfNeeded(sheet, survey, surveyAnswers);
           }
         }
       } else {
-        //print('📄 File does not exist, creating new file...');
+        ////print('📄 File does not exist, creating new file...');
         // Create new Excel file
         excel = Excel.createExcel();
         
@@ -111,20 +111,20 @@ class ExcelExportService {
       _addSurveyResponse(sheet, survey, surveyAnswers);
 
       // Save Excel file
-      //print('💾 Encoding Excel file...');
+      ////print('💾 Encoding Excel file...');
       final excelBytes = excel.encode();
       if (excelBytes != null) {
-        //print('📁 Writing to file: $filePath');
+        ////print('📁 Writing to file: $filePath');
         await file.writeAsBytes(excelBytes);
-        //print('✅ Excel file saved successfully!');
+        ////print('✅ Excel file saved successfully!');
         return filePath;
       }
 
-      //print('❌ Failed to encode Excel file');
+      ////print('❌ Failed to encode Excel file');
       return null;
     } catch (e, stackTrace) {
-      //print('❌ Error exporting to Excel: $e');
-      //print('Stack trace: $stackTrace');
+      ////print('❌ Error exporting to Excel: $e');
+      ////print('Stack trace: $stackTrace');
       rethrow;
     }
   }
@@ -194,7 +194,7 @@ class ExcelExportService {
                 .toList()
                 ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
             
-            //print('🔍 Question "${firstQuestion.text}" (ID: ${firstQuestion.id}): Found ${allAnswersForFirstQ.length} answers');
+            ////print('🔍 Question "${firstQuestion.text}" (ID: ${firstQuestion.id}): Found ${allAnswersForFirstQ.length} answers');
             
             // Only consider instances that have been updated recently (within last edit session)
             // Strategy: group by instanceId and take only the most recent timestamp for each
@@ -219,9 +219,9 @@ class ExcelExportService {
                   .map((e) => e.key)
                   .toSet();
               
-              //print('🕐 Most recent edit: $mostRecentTime, threshold: $timeThreshold');
-              //print('📋 Group "${group.name}": Found ${uniqueInstances.length} recent instances (IDs: ${uniqueInstances.toList()..sort()})');
-              //print('   Excluded old instances: ${instanceTimestamps.keys.where((k) => !uniqueInstances.contains(k)).toList()}');
+              ////print('🕐 Most recent edit: $mostRecentTime, threshold: $timeThreshold');
+              ////print('📋 Group "${group.name}": Found ${uniqueInstances.length} recent instances (IDs: ${uniqueInstances.toList()..sort()})');
+              ////print('   Excluded old instances: ${instanceTimestamps.keys.where((k) => !uniqueInstances.contains(k)).toList()}');
               
               maxInstances = uniqueInstances.length;
             }
@@ -343,7 +343,7 @@ class ExcelExportService {
   void _expandHeadersIfNeeded(Sheet sheet, SurveyModel survey, SurveyAnswersModel surveyAnswers) {
     _headerStructure.clear();
     
-    //print('📖 Reading existing headers...');
+    ////print('📖 Reading existing headers...');
     
     // Read existing headers
     final existingHeaders = <String>[];
@@ -353,21 +353,21 @@ class ExcelExportService {
       existingHeaders.add(cell.value.toString());
     }
     
-    //print('📋 Found ${existingHeaders.length} existing headers');
+    ////print('📋 Found ${existingHeaders.length} existing headers');
     
     // Build header structure for new survey
     final tempHeaderStructure = <Map<String, dynamic>>[];
     _buildHeaderStructureInternal(survey, surveyAnswers, tempHeaderStructure);
     
-    //print('🔍 New survey needs ${tempHeaderStructure.length} headers');
+    ////print('🔍 New survey needs ${tempHeaderStructure.length} headers');
     
     // Check if we need to expand
     if (tempHeaderStructure.length > existingHeaders.length) {
       final existingInstanceCount = _countInstancesInHeaders(existingHeaders);
       final newInstanceCount = _countInstancesInStructure(tempHeaderStructure);
       
-      //print('📈 Expanding structure: $existingInstanceCount → $newInstanceCount أفراد');
-      //print('   Rebuilding file with ${tempHeaderStructure.length} columns in correct order');
+      ////print('📈 Expanding structure: $existingInstanceCount → $newInstanceCount أفراد');
+      ////print('   Rebuilding file with ${tempHeaderStructure.length} columns in correct order');
       
       // Build old header structure for mapping
       final oldHeaderStructure = <Map<String, dynamic>>[];
@@ -403,7 +403,7 @@ class ExcelExportService {
         existingRowsData.add(rowData);
       }
       
-      //print('💾 Preserved ${existingRowsData.length} existing rows');
+      ////print('💾 Preserved ${existingRowsData.length} existing rows');
       
       // Clear all rows except keeping the sheet (no clear method available)
       // We'll overwrite by writing new headers and data
@@ -423,7 +423,7 @@ class ExcelExportService {
         );
       }
       
-      //print('📋 Rebuilt headers with new structure');
+      ////print('📋 Rebuilt headers with new structure');
       
       // Rewrite existing data rows with mapping
       for (int rowIndex = 0; rowIndex < existingRowsData.length; rowIndex++) {
@@ -447,13 +447,13 @@ class ExcelExportService {
         }
       }
       
-      //print('✅ Rebuilt ${existingRowsData.length} rows with new column order');
+      ////print('✅ Rebuilt ${existingRowsData.length} rows with new column order');
     } else if (tempHeaderStructure.length < existingHeaders.length) {
       // New survey has fewer columns - can still append
-      //print('⚠️ New survey has fewer columns (${_countInstancesInStructure(tempHeaderStructure)} vs ${_countInstancesInHeaders(existingHeaders)} أفراد)');
-      //print('   Will append with empty cells for missing columns');
+      ////print('⚠️ New survey has fewer columns (${_countInstancesInStructure(tempHeaderStructure)} vs ${_countInstancesInHeaders(existingHeaders)} أفراد)');
+      ////print('   Will append with empty cells for missing columns');
     } else {
-      //print('✅ Header structure matches exactly');
+      ////print('✅ Header structure matches exactly');
     }
     
     // Use the larger structure (existing or new)
@@ -461,7 +461,7 @@ class ExcelExportService {
         ? tempHeaderStructure 
         : _rebuildStructureFromHeaders(existingHeaders, survey, surveyAnswers);
     
-    //print('📋 Using structure with ${_headerStructure.length} columns');
+    ////print('📋 Using structure with ${_headerStructure.length} columns');
   }
   
   /// Format header text from header map
@@ -651,7 +651,7 @@ class ExcelExportService {
   ) {
     // Data starts from row 1 (row 0 is headers)
     final rowIndex = sheet.maxRows;
-    //print('➕ Adding new response at row $rowIndex');
+    ////print('➕ Adding new response at row $rowIndex');
 
     // Use the header structure to ensure correct column order
     for (int colIndex = 0; colIndex < _headerStructure.length; colIndex++) {
@@ -793,7 +793,7 @@ class ExcelExportService {
     required SurveyModel survey,
     required SurveyAnswersModel surveyAnswers,
   }) async {
-    //print('📊 Starting Daily Excel export...');
+    ////print('📊 Starting Daily Excel export...');
     try {
       // Request storage permission
       if (Platform.isAndroid) {
@@ -813,7 +813,7 @@ class ExcelExportService {
       final filePath = '${directory.path}/$fileName';
       final file = File(filePath);
       
-      //print('📁 Daily file: $fileName');
+      ////print('📁 Daily file: $fileName');
 
       Excel excel;
       Sheet sheet;
@@ -822,7 +822,7 @@ class ExcelExportService {
       
       // Check if today's file exists
       if (await file.exists()) {
-        //print('📂 Today\'s file exists, appending...');
+        ////print('📂 Today\'s file exists, appending...');
         // Load existing file
         final bytes = await file.readAsBytes();
         excel = Excel.decodeBytes(bytes);
@@ -831,10 +831,10 @@ class ExcelExportService {
         sheet = excel.sheets[sheetName]!;
         
         // Check if we need to expand headers (in case survey structure changed)
-        //print('✅ Compatible structure found, checking for header expansion...');
+        ////print('✅ Compatible structure found, checking for header expansion...');
         _expandHeadersIfNeeded(sheet, survey, surveyAnswers);
       } else {
-        //print('📝 Creating new daily file...');
+        ////print('📝 Creating new daily file...');
         // Create new file
         excel = Excel.createExcel();
         
@@ -858,10 +858,10 @@ class ExcelExportService {
       final bytes = excel.encode();
       await file.writeAsBytes(bytes!);
 
-      //print('✅ Daily Excel export completed: $filePath');
+      ////print('✅ Daily Excel export completed: $filePath');
       return filePath;
     } catch (e) {
-      //print('❌ Error exporting to daily Excel: $e');
+      ////print('❌ Error exporting to daily Excel: $e');
       return null;
     }
   }
@@ -875,7 +875,7 @@ class ExcelExportService {
         text: 'Survey responses exported on ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}',
       );
     } catch (e) {
-      //print('❌ Error sharing file: $e');
+      ////print('❌ Error sharing file: $e');
       rethrow;
     }
   }
@@ -890,12 +890,12 @@ class ExcelExportService {
 
       if (await file.exists()) {
         await file.delete();
-        //print('🗑️ Deleted Excel file: $fileName');
+        ////print('🗑️ Deleted Excel file: $fileName');
         return true;
       }
       return false;
     } catch (e) {
-      //print('❌ Error deleting Excel file: $e');
+      ////print('❌ Error deleting Excel file: $e');
       return false;
     }
   }
@@ -924,7 +924,7 @@ class ExcelExportService {
       }
       return null;
     } catch (e) {
-      //print('❌ Error getting file info: $e');
+      ////print('❌ Error getting file info: $e');
       return null;
     }
   }

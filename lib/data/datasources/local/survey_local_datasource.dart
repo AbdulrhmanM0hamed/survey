@@ -147,7 +147,7 @@ class SurveyLocalDataSourceImpl implements SurveyLocalDataSource {
           value: jsonString,
         );
         
-        //print('✅ Saved completed survey with unique key: $uniqueKey');
+        ////print('✅ Saved completed survey with unique key: $uniqueKey');
       }
     } catch (e) {
       throw CacheException(message: 'فشل في حفظ إجابات الاستبيان: ${e.toString()}');
@@ -229,7 +229,7 @@ class SurveyLocalDataSourceImpl implements SurveyLocalDataSource {
         }
       }
 
-      //print('✅ Found ${completedAnswers.length} completed surveys in local storage');
+      ////print('✅ Found ${completedAnswers.length} completed surveys in local storage');
       return completedAnswers;
     } catch (e) {
       throw CacheException(
@@ -271,7 +271,7 @@ class SurveyLocalDataSourceImpl implements SurveyLocalDataSource {
           boxName: HiveService.answersBox,
           key: key,
         );
-        //print('✅ Deleted completed survey: $key');
+        ////print('✅ Deleted completed survey: $key');
       }
     } catch (e) {
       throw CacheException(message: 'فشل في حذف الاستبيان المكتمل: ${e.toString()}');

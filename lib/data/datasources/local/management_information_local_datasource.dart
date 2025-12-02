@@ -27,7 +27,7 @@ class ManagementInformationLocalDataSourceImpl
         key: 'management_info_${type.name}',
         value: jsonString,
       );
-      //print('✅ Cached ${type.name}: ${data.items.length} items');
+      ////print('✅ Cached ${type.name}: ${data.items.length} items');
     } catch (e) {
       throw CacheException(
         message: 'فشل في حفظ ${_getTypeLabel(type)}: ${e.toString()}',
@@ -49,10 +49,10 @@ class ManagementInformationLocalDataSourceImpl
 
       final jsonMap = jsonDecode(jsonString) as Map<String, dynamic>;
       final data = ManagementInformationResponse.fromJson(jsonMap);
-      //print('📂 Loaded cached ${type.name}: ${data.items.length} items');
+      ////print('📂 Loaded cached ${type.name}: ${data.items.length} items');
       return data;
     } catch (e) {
-      //print('⚠️ Error loading cached ${type.name}: $e');
+      ////print('⚠️ Error loading cached ${type.name}: $e');
       return null;
     }
   }

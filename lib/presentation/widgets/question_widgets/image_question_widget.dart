@@ -90,11 +90,11 @@ class _ImageQuestionWidgetState extends State<ImageQuestionWidget> {
         
         widget.onChanged(base64WithPrefix);
         
-        //print('✅ Image captured: ${bytes.length} bytes → ${base64String.length} base64 chars');
-        //print('📷 MIME type: $mimeType');
+        ////print('✅ Image captured: ${bytes.length} bytes → ${base64String.length} base64 chars');
+        ////print('📷 MIME type: $mimeType');
       }
     } catch (e) {
-      //print('❌ Error picking image: $e');
+      ////print('❌ Error picking image: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
