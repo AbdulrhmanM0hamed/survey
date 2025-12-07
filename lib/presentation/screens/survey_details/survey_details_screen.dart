@@ -387,7 +387,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                           onPressed: () {
                             // Unfocus to save any pending TextField values
                             FocusScope.of(context).unfocus();
-                            
+
                             // Wait a bit for TextField to save its value
                             Future.delayed(const Duration(milliseconds: 100), () {
                               // Validate current section before proceeding
@@ -476,7 +476,9 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           sourceQuestionToGroups[condition.sourceQuestionId] = [];
         }
         // Only add if not already in the list
-        if (!sourceQuestionToGroups[condition.sourceQuestionId]!.contains(group)) {
+        if (!sourceQuestionToGroups[condition.sourceQuestionId]!.contains(
+          group,
+        )) {
           sourceQuestionToGroups[condition.sourceQuestionId]!.add(group);
         }
       }
@@ -500,16 +502,22 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
             // CRITICAL: Only show the group if THIS question is the trigger
             // For direct questions (not in a repeating group), groupInstanceId is null
             final isTriggering = viewModel.isQuestionTriggeringGroup(
-              relatedGroup.id, 
+              relatedGroup.id,
               question.id,
               groupInstanceId: null,
             );
-            
+
             //print('🔍 Q${question.id} → Group ${relatedGroup.id}: isTriggering=$isTriggering');
-            
+
             if (isTriggering) {
               //print('   ✅ Adding Group ${relatedGroup.id} after Q${question.id}');
-              regularWidgets.add(_buildQuestionGroup(relatedGroup, viewModel));
+              regularWidgets.add(
+                _buildQuestionGroup(
+                  relatedGroup,
+                  viewModel,
+                  triggerSourceQuestionId: question.id,
+                ),
+              );
               addedGroupIds.add(relatedGroup.id);
               groups.remove(relatedGroup);
             }
@@ -524,14 +532,16 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
       if (!addedGroupIds.contains(group.id)) {
         // Check if this group has any conditions that link it to a source question
         final hasTriggeredCondition = group.targetConditions.any(
-          (c) => c.actionEnum == ConditionAction.show || c.actionEnum == ConditionAction.repetition
+          (c) =>
+              c.actionEnum == ConditionAction.show ||
+              c.actionEnum == ConditionAction.repetition,
         );
-        
+
         if (hasTriggeredCondition) {
           //print('   ⏭️ Skipping triggered group ${group.id} in remaining groups (will be added by trigger question)');
           continue;
         }
-        
+
         regularWidgets.add(_buildQuestionGroup(group, viewModel));
       }
     }
@@ -748,17 +758,18 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
     QuestionGroupModel group,
     SurveyDetailsViewModel viewModel, {
     int? parentInstanceId,
+    int? triggerSourceQuestionId, // Track source trigger for unique IDs
   }) {
     final repetitions = viewModel.getGroupRepetitions(group.id);
     //print('🎨 Building group ${group.id} (${group.name}) with $repetitions repetitions, parentInstance=$parentInstanceId');
-    
+
     // Get all groups in this section to check for related conditional groups
     final section = viewModel.visibleSections.firstWhere(
       (s) => s.questionGroups.any((g) => g.id == group.id),
       orElse: () => viewModel.visibleSections.first,
     );
     final allGroups = viewModel.getVisibleGroups(section);
-    
+
     // Create map of question IDs to related groups
     final Map<int, List<QuestionGroupModel>> questionToRelatedGroups = {};
     for (var grp in allGroups) {
@@ -767,7 +778,9 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
         if (!questionToRelatedGroups.containsKey(condition.sourceQuestionId)) {
           questionToRelatedGroups[condition.sourceQuestionId] = [];
         }
-        if (!questionToRelatedGroups[condition.sourceQuestionId]!.contains(grp)) {
+        if (!questionToRelatedGroups[condition.sourceQuestionId]!.contains(
+          grp,
+        )) {
           questionToRelatedGroups[condition.sourceQuestionId]!.add(grp);
         }
       }
@@ -822,9 +835,12 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-           //   Always show instance number for debugging
+              //   Always show instance number for debugging
               Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 12,
+                ),
                 margin: const EdgeInsets.symmetric(vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.orange.shade100,
@@ -843,14 +859,32 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
               ...() {
                 final widgets = <Widget>[];
                 final questions = viewModel.getVisibleQuestions(group: group);
-                
+
                 for (var question in questions) {
                   // Determine the correct groupInstanceId:
                   // - If this group has repetition condition (is a repeating group), use instanceIndex
                   // - Otherwise, use parentInstanceId (from parent group)
-                  final hasRepetitionCondition = group.targetConditions.any((c) => c.actionEnum == ConditionAction.repetition);
-                  final effectiveInstanceId = hasRepetitionCondition ? instanceIndex : parentInstanceId;
-                  
+                  final hasRepetitionCondition = group.targetConditions.any(
+                    (c) => c.actionEnum == ConditionAction.repetition,
+                  );
+
+                  // Calculate effective instance ID
+                  // For conditional groups (non-repeating), we MUST incorporate the triggerSourceQuestionId
+                  // to differentiate between the same group triggered by different questions.
+                  int? effectiveInstanceId;
+                  if (hasRepetitionCondition) {
+                    effectiveInstanceId = instanceIndex;
+                  } else {
+                    effectiveInstanceId = parentInstanceId;
+                    if (triggerSourceQuestionId != null) {
+                      // Create a composite ID: (SourceID * 10000) + ParentInstanceID
+                      // This prevents collision when same group is triggered by different sources
+                      effectiveInstanceId =
+                          (triggerSourceQuestionId * 10000) +
+                          (effectiveInstanceId ?? 0);
+                    }
+                  }
+
                   // Find answer for this question and instance
                   AnswerModel? answer;
                   try {
@@ -869,7 +903,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                           answer?.value == null)
                       ? (instanceIndex + 1)
                       : answer?.value;
-                  
+
                   // Auto-save member index on first render
                   if (question.code == 'IND_MEMBER_INDEX' &&
                       answer?.value == null) {
@@ -884,25 +918,27 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                   }
 
                   // Add the question widget
-                  widgets.add(QuestionWidget(
-                    question: question,
-                    initialValue: initialValue,
-                    onChanged: (value) async {
-                      try {
-                        //print('🔵 QuestionWidget callback: questionId=${question.id}, code=${question.code}, value=$value, effectiveInstance=$effectiveInstanceId');
-                        await viewModel.saveAnswer(
-                          questionId: question.id,
-                          questionCode: question.code,
-                          value: value,
-                          groupInstanceId: effectiveInstanceId,
-                        );
-                      } catch (e) {
-                        //print('❌ ERROR in saveAnswer: $e');
-                      }
-                    },
-                    isRequired: viewModel.isQuestionRequired(question.id),
-                  ));
-                  
+                  widgets.add(
+                    QuestionWidget(
+                      question: question,
+                      initialValue: initialValue,
+                      onChanged: (value) async {
+                        try {
+                          //print('🔵 QuestionWidget callback: questionId=${question.id}, code=${question.code}, value=$value, effectiveInstance=$effectiveInstanceId');
+                          await viewModel.saveAnswer(
+                            questionId: question.id,
+                            questionCode: question.code,
+                            value: value,
+                            groupInstanceId: effectiveInstanceId,
+                          );
+                        } catch (e) {
+                          //print('❌ ERROR in saveAnswer: $e');
+                        }
+                      },
+                      isRequired: viewModel.isQuestionRequired(question.id),
+                    ),
+                  );
+
                   // Check if this question has related conditional groups
                   // Check for EACH instance separately using groupInstanceId
                   final relatedGroups = questionToRelatedGroups[question.id];
@@ -910,21 +946,28 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                     for (var relatedGroup in relatedGroups) {
                       // CRITICAL: Check if THIS question in THIS instance is triggering the group
                       final isTriggering = viewModel.isQuestionTriggeringGroup(
-                        relatedGroup.id, 
+                        relatedGroup.id,
                         question.id,
                         groupInstanceId: effectiveInstanceId,
                       );
-                      
+
                       //print('   🔍 [Inside Group ${group.id}, Instance $instanceIndex, Effective $effectiveInstanceId] Q${question.id} → Group ${relatedGroup.id}: isTriggering=$isTriggering');
-                      
+
                       if (isTriggering) {
                         //print('      ✅ Adding Group ${relatedGroup.id} after Q${question.id} with parentInstance=$instanceIndex');
-                        widgets.add(_buildQuestionGroup(relatedGroup, viewModel, parentInstanceId: instanceIndex));
+                        widgets.add(
+                          _buildQuestionGroup(
+                            relatedGroup,
+                            viewModel,
+                            parentInstanceId: instanceIndex,
+                            triggerSourceQuestionId: question.id,
+                          ),
+                        );
                       }
                     }
                   }
                 }
-                
+
                 return widgets;
               }(),
             ],
@@ -950,7 +993,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
       }
 
       final repetitions = viewModel.getGroupRepetitions(group.id);
-      
+
       // Count visible questions in this group
       int visibleQuestionsCount = 0;
       int requiredQuestionsCount = 0;
@@ -960,8 +1003,10 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           if (viewModel.isQuestionRequired(q.id)) requiredQuestionsCount++;
         }
       }
-      
-      print('   📦 Checking Group ${group.id}: visible=true, repetitions=$repetitions, visibleQuestions=$visibleQuestionsCount, requiredQuestions=$requiredQuestionsCount');
+
+      print(
+        '   📦 Checking Group ${group.id}: visible=true, repetitions=$repetitions, visibleQuestions=$visibleQuestionsCount, requiredQuestions=$requiredQuestionsCount',
+      );
 
       for (
         int instanceIndex = 0;
@@ -970,7 +1015,9 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
       ) {
         for (final question in group.questions) {
           if (!viewModel.isQuestionVisible(question.id)) {
-            print('      ⏭️ Q${question.id} (${question.code}): HIDDEN - skipped');
+            print(
+              '      ⏭️ Q${question.id} (${question.code}): HIDDEN - skipped',
+            );
             continue;
           }
           if (!viewModel.isQuestionRequired(question.id)) continue;
@@ -1007,11 +1054,17 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           }
 
           if (isAnswerMissing) {
-            print('      ❌ Q${question.id} (${question.code}): REQUIRED but EMPTY');
+            print(
+              '      ❌ Q${question.id} (${question.code}): REQUIRED but EMPTY',
+            );
             if (question.id == 21005) {
               print('         🔍 SPECIAL DEBUG Q21005:');
-              print('            - isVisible: ${viewModel.isQuestionVisible(21005)}');
-              print('            - isRequired: ${viewModel.isQuestionRequired(21005)}');
+              print(
+                '            - isVisible: ${viewModel.isQuestionVisible(21005)}',
+              );
+              print(
+                '            - isRequired: ${viewModel.isQuestionRequired(21005)}',
+              );
               print('            - answer value: ${answer?.value}');
               print('            - question text: ${question.text}');
             }
@@ -1061,7 +1114,9 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
     if (missingQuestions.isEmpty) {
       print('✅ VALIDATION PASSED - All required fields filled\n');
     } else {
-      print('❌ VALIDATION FAILED - Missing ${missingQuestions.length} required questions: $missingQuestions\n');
+      print(
+        '❌ VALIDATION FAILED - Missing ${missingQuestions.length} required questions: $missingQuestions\n',
+      );
     }
     return missingQuestions.isEmpty;
   }
@@ -1434,10 +1489,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           children: [
             Icon(Icons.delete_sweep, color: Colors.orange),
             SizedBox(width: 12),
-            Text(
-              'مسح الإجابات',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
+            Text('مسح الإجابات', style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
         content: const Text(
@@ -1451,10 +1503,10 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           ElevatedButton.icon(
             onPressed: () {
               Navigator.pop(context);
-              
+
               // Clear form answers
               viewModel.clearFormAnswers();
-              
+
               // Show success message
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
