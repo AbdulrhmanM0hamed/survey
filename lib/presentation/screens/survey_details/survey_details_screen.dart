@@ -836,26 +836,26 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               //   Always show instance number for debugging
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 8,
-                  horizontal: 12,
-                ),
-                margin: const EdgeInsets.symmetric(vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange.shade300),
-                ),
-                child: Text(
-                  'التكرار ${instanceIndex + 1} من $repetitions',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.orange.shade900,
-                  ),
-                ),
-              ),
+              // Container(
+              //   padding: const EdgeInsets.symmetric(
+              //     vertical: 8,
+              //     horizontal: 12,
+              //   ),
+              //   margin: const EdgeInsets.symmetric(vertical: 4),
+              //   decoration: BoxDecoration(
+              //     color: Colors.orange.shade100,
+              //     borderRadius: BorderRadius.circular(8),
+              //     border: Border.all(color: Colors.orange.shade300),
+              //   ),
+              //   child: Text(
+              //     'التكرار ${instanceIndex + 1} من $repetitions',
+              //     style: TextStyle(
+              //       fontSize: 14,
+              //       fontWeight: FontWeight.bold,
+              //       color: Colors.orange.shade900,
+              //     ),
+              //   ),
+              // ),
               ...() {
                 final widgets = <Widget>[];
                 final questions = viewModel.getVisibleQuestions(group: group);
