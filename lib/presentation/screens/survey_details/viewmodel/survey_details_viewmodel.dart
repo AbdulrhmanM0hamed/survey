@@ -37,6 +37,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
   final Map<int, bool> _groupVisibility = {};
   final Map<int, bool> _sectionVisibility = {};
   final Map<int, bool> _questionRequired = {};
+  
+  // Instance-specific visibility for questions inside repeated groups
+  // Key format: "${questionId}_${instanceId}"
+  final Map<String, bool> _instanceQuestionVisibility = {};
 
   // Track group repetitions
   final Map<int, int> _groupRepetitions = {};
@@ -101,8 +105,9 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         _survey = survey;
 
         // Load saved answers if exists
-        final answersResult =
-            await repository.getSurveyAnswers(surveyId: surveyId);
+        final answersResult = await repository.getSurveyAnswers(
+          surveyId: surveyId,
+        );
 
         answersResult.fold(
           (failure) {
@@ -130,14 +135,14 @@ class SurveyDetailsViewModel extends ChangeNotifier {
             //print('   _surveyAnswers created with: researcher=${_researcherName}, supervisor=${_supervisorName}, city=${_cityName}');
             //print('   IDs: researcher=$_researcherId, supervisor=$_supervisorId, city=$_cityId');
             //print('   _surveyAnswers is null? ${_surveyAnswers == null}');
-            
+
             // Save immediately to update Hive with new fields
             repository.saveSurveyAnswers(surveyAnswers: _surveyAnswers!);
           },
           (savedAnswers) {
             //print('📝 Found saved answers result (success branch)');
             //print('   savedAnswers is null? ${savedAnswers == null}');
-            
+
             if (savedAnswers == null) {
               // Repository returned Right(null), create new
               //print('   savedAnswers is null, creating new');
@@ -160,7 +165,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                 latitude: _latitude,
                 longitude: _longitude,
               );
-              
+
               // Save immediately
               repository.saveSurveyAnswers(surveyAnswers: _surveyAnswers!);
             } else {
@@ -189,10 +194,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
               } else {
                 // Has answers
                 //print('   Loading saved answers and updating with new pre-survey info');
-                
+
                 // CRITICAL FIX: If startTime is provided (fresh start from list), update startedAt
                 // regardless of whether it has answers or not, because user clicked "Start" now.
-                // Unless you want to strictly preserve history for drafts. 
+                // Unless you want to strictly preserve history for drafts.
                 // Given the user request "start starts when I click SurveyCard", we should update it.
                 final newStartTime = _startTime ?? savedAnswers.startedAt;
                 //print('   🕒 Updating startedAt from ${savedAnswers.startedAt} to $newStartTime');
@@ -215,7 +220,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                 //print('   Updated: researcher=${_researcherName}, supervisor=${_supervisorName}, city=${_cityName}');
                 //print('   IDs: researcher=$_researcherId, supervisor=$_supervisorId, city=$_cityId');
               }
-              
+
               // Save updated survey answers
               repository.saveSurveyAnswers(surveyAnswers: _surveyAnswers!);
             }
@@ -231,7 +236,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
 
         _errorMessage = null;
         _setState(SurveyDetailsState.loaded);
-        
+
         //print('📝 loadSurvey completed. Final check: _surveyAnswers is null? ${_surveyAnswers == null}');
       },
     );
@@ -283,29 +288,37 @@ class SurveyDetailsViewModel extends ChangeNotifier {
             //print('   - sourceQuestionId: ${cond.sourceQuestionId}, action: ${cond.actionEnum}, operator: ${cond.operatorEnum}');
           }
         }
-        
+
         // Evaluate group target conditions
         _evaluateGroupConditions(group);
+
+        // Check if this group has Repetition condition (is a repeating group)
+        final hasRepetitionCondition = group.targetConditions.any(
+          (c) => c.actionEnum == ConditionAction.repetition,
+        );
         
+        final repetitions = _groupRepetitions[group.id] ?? 1;
+
         for (final question in group.questions) {
           // Special debug for question 20985 inside groups
           if (question.id == 20985) {
-            //print('🔍 SPECIAL DEBUG - Question 20985 (عدد الافراد من ذوي الهمم) INSIDE GROUP:');
-            //print('   sourceConditions: ${question.sourceConditions.length}');
-            for (final cond in question.sourceConditions) {
-              //print('   - targetType: ${cond.targetTypeEnum}, action: ${cond.actionEnum}, targetGroupId: ${cond.targetGroupId}');
-            }
-            
             // Special handling: Q20985 should control group 96 repetitions (السمنه او النحافة)
             final answer = _getAnswerValue(20985);
             if (answer != null && answer is int && answer > 0) {
-              //print('🔧 SPECIAL FIX: Setting group 96 repetitions to $answer based on Q20985 answer');
               _groupRepetitions[96] = answer;
-              // Also make group 96 visible
               _groupVisibility[96] = true;
             }
           }
-          _evaluateQuestionConditions(question);
+          
+          // For questions in repeating groups, evaluate for each instance
+          if (hasRepetitionCondition && question.sourceConditions.isNotEmpty) {
+            for (int instanceIndex = 0; instanceIndex < repetitions; instanceIndex++) {
+              _evaluateQuestionConditions(question, groupInstanceId: instanceIndex);
+            }
+          } else {
+            // For non-repeating groups, evaluate without instanceId
+            _evaluateQuestionConditions(question);
+          }
         }
       }
 
@@ -317,7 +330,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
           for (final cond in question.sourceConditions) {
             //print('   - targetType: ${cond.targetTypeEnum}, action: ${cond.actionEnum}, targetGroupId: ${cond.targetGroupId}');
           }
-          
+
           // Special handling: Q20985 should control group 96 repetitions (السمنه او النحافة)
           final answer = _getAnswerValue(20985);
           if (answer != null && answer is int && answer > 0) {
@@ -348,37 +361,90 @@ class SurveyDetailsViewModel extends ChangeNotifier {
   void _resetConditionsToDefault() {
     if (_survey?.sections == null) return;
 
+    // First, collect all questions/groups that are targets of Show conditions
+    final Set<int> questionsWithShowConditions = {};
+    final Set<int> groupsWithShowConditions = {};
+    final Set<int> sectionsWithShowConditions = {};
+
+    // Scan all questions to find their sourceConditions
     for (final section in _survey!.sections!) {
-      // Reset section visibility to its default state
-      _sectionVisibility[section.id] = section.isActive;
+      for (final group in section.questionGroups) {
+        for (final question in group.questions) {
+          for (final condition in question.sourceConditions) {
+            if (condition.actionEnum == ConditionAction.show) {
+              if (condition.targetTypeEnum == TargetType.question && condition.targetQuestionId != null) {
+                questionsWithShowConditions.add(condition.targetQuestionId!);
+              } else if (condition.targetTypeEnum == TargetType.group && condition.targetGroupId != null) {
+                groupsWithShowConditions.add(condition.targetGroupId!);
+              } else if (condition.targetTypeEnum == TargetType.section && condition.targetSectionId != null) {
+                sectionsWithShowConditions.add(condition.targetSectionId!);
+              }
+            }
+          }
+        }
+        // Also check group's targetConditions
+        for (final condition in group.targetConditions) {
+          if (condition.actionEnum == ConditionAction.show) {
+            groupsWithShowConditions.add(group.id);
+          }
+        }
+        for (final question in section.questions) {
+          for (final condition in question.sourceConditions) {
+            if (condition.actionEnum == ConditionAction.show) {
+              if (condition.targetTypeEnum == TargetType.question && condition.targetQuestionId != null) {
+                questionsWithShowConditions.add(condition.targetQuestionId!);
+              } else if (condition.targetTypeEnum == TargetType.group && condition.targetGroupId != null) {
+                groupsWithShowConditions.add(condition.targetGroupId!);
+              } else if (condition.targetTypeEnum == TargetType.section && condition.targetSectionId != null) {
+                sectionsWithShowConditions.add(condition.targetSectionId!);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Now reset visibility with Show targets hidden by default
+    for (final section in _survey!.sections!) {
+      // Reset section visibility
+      if (sectionsWithShowConditions.contains(section.id)) {
+        _sectionVisibility[section.id] = false;
+      } else {
+        _sectionVisibility[section.id] = section.isActive;
+      }
 
       for (final group in section.questionGroups) {
-        // Check if group has Show targetConditions - if so, it should be hidden by default
-        final hasShowConditions = group.targetConditions.any(
-          (c) => c.actionEnum == ConditionAction.show
-        );
-        
-        if (hasShowConditions) {
-          // Group with Show conditions should be hidden until condition is met
+        // Check if group is a target of Show condition
+        if (groupsWithShowConditions.contains(group.id)) {
           _groupVisibility[group.id] = false;
         } else {
-          // Regular group - use default isActive state
           _groupVisibility[group.id] = group.isActive;
         }
         _groupRepetitions[group.id] = group.minCount;
 
         for (final question in group.questions) {
-          // Reset question visibility and requirements to default
-          _questionVisibility[question.id] = question.isActive;
+          // Check if question is a target of Show condition
+          if (questionsWithShowConditions.contains(question.id)) {
+            _questionVisibility[question.id] = false;
+          } else {
+            _questionVisibility[question.id] = question.isActive;
+          }
           _questionRequired[question.id] = question.isRequired;
         }
       }
 
       for (final question in section.questions) {
-        _questionVisibility[question.id] = question.isActive;
+        // Check if question is a target of Show condition
+        if (questionsWithShowConditions.contains(question.id)) {
+          _questionVisibility[question.id] = false;
+        } else {
+          _questionVisibility[question.id] = question.isActive;
+        }
         _questionRequired[question.id] = question.isRequired;
       }
     }
+    
+    print('🔄 Reset: ${questionsWithShowConditions.length} questions, ${groupsWithShowConditions.length} groups hidden by default (Show conditions)');
   }
 
   void _evaluateGroupConditions(QuestionGroupModel group) {
@@ -386,14 +452,14 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     if (group.targetConditions.isNotEmpty) {
       //print('🔍 Evaluating ${group.targetConditions.length} conditions for group ${group.id} (${group.code})');
     }
-    
+
     // Special debug for Group 97
     if (group.id == 97) {
       //print('⭐⭐⭐ SPECIAL DEBUG GROUP 97 ⭐⭐⭐');
       //print('   Group name: ${group.name}');
       //print('   targetConditions count: ${group.targetConditions.length}');
     }
-    
+
     // Special debug for Group 101 (الجنسية)
     if (group.id == 101) {
       //print('🌟🌟🌟 SPECIAL DEBUG GROUP 101 (الجنسية) 🌟🌟🌟');
@@ -402,16 +468,18 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       //print('   Current visibility: ${_groupVisibility[101]}');
       //print('   targetConditions count: ${group.targetConditions.length}');
     }
-    
+
     // Since all conditions in a group target the same group, use OR logic
     bool anyConditionMet = false;
-    dynamic firstCondition = group.targetConditions.isNotEmpty ? group.targetConditions.first : null;
-    
+    dynamic firstCondition = group.targetConditions.isNotEmpty
+        ? group.targetConditions.first
+        : null;
+
     for (final condition in group.targetConditions) {
       final answer = _getAnswerValue(condition.sourceQuestionId);
       //print('   Group Condition: action=${condition.actionEnum}, value=${condition.value}, operator=${condition.operatorEnum}');
       //print('   Answer value: $answer (type: ${answer.runtimeType})');
-      
+
       // Debug: show source question choices for Group 97 and 101
       if (group.id == 97 || group.id == 101) {
         final sourceQ = _findQuestionById(condition.sourceQuestionId);
@@ -434,13 +502,13 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         // Don't break - we want to log all conditions
       }
     }
-    
+
     // Apply action based on OR result
     if (firstCondition != null) {
       if (anyConditionMet) {
         //print('   ✅ At least one condition met → applying action');
         _applyConditionAction(firstCondition);
-        
+
         // Extra debug for Group 101
         if (group.id == 101) {
           //print('   🌟 Group 101 visibility after action: ${_groupVisibility[101]}');
@@ -449,7 +517,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       } else {
         //print('   ❌ No conditions met → applying reverse action');
         _applyReverseConditionAction(firstCondition);
-        
+
         // Extra debug for Group 101
         if (group.id == 101) {
           //print('   🌟 Group 101 visibility after reverse: ${_groupVisibility[101]}');
@@ -458,59 +526,63 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     }
   }
 
-  void _evaluateQuestionConditions(QuestionModel question) {
+  void _evaluateQuestionConditions(QuestionModel question, {int? groupInstanceId}) {
     // Evaluate all sourceConditions from this question
     if (question.sourceConditions.isNotEmpty) {
-      //print('🔍 Evaluating ${question.sourceConditions.length} conditions for question ${question.id} (${question.code})');
+      //print('🔍 Evaluating ${question.sourceConditions.length} conditions for question ${question.id} (${question.code}) [instance: $groupInstanceId]');
     }
-    
+
     // Special debug for questions 20906 and 20911 (الجنسية)
     if (question.id == 20906 || question.id == 20911) {
       //print('🌟 SPECIAL DEBUG Q${question.id} (${question.text})');
       //print('   Question code: ${question.code}');
-      //print('   Current answer: ${_getAnswerValue(question.id)}');
+      //print('   Current answer: ${_getAnswerValue(question.id, groupInstanceId: groupInstanceId)}');
       //print('   sourceConditions count: ${question.sourceConditions.length}');
       for (final cond in question.sourceConditions) {
         //print('   - targetGroupId: ${cond.targetGroupId}, action: ${cond.actionEnum}, value: "${cond.value}"');
       }
     }
-    
+
     // Group conditions by target (targetType + targetId)
     final Map<String, List<dynamic>> groupedConditions = {};
     final Map<String, bool> targetResults = {};
-    
+
     for (final condition in question.sourceConditions) {
       // Create a unique key for each target
       String targetKey;
-      if (condition.targetTypeEnum == TargetType.question && condition.targetQuestionId != null) {
+      if (condition.targetTypeEnum == TargetType.question &&
+          condition.targetQuestionId != null) {
         targetKey = 'Q${condition.targetQuestionId}';
-      } else if (condition.targetTypeEnum == TargetType.group && condition.targetGroupId != null) {
+      } else if (condition.targetTypeEnum == TargetType.group &&
+          condition.targetGroupId != null) {
         targetKey = 'G${condition.targetGroupId}';
-      } else if (condition.targetTypeEnum == TargetType.section && condition.targetSectionId != null) {
+      } else if (condition.targetTypeEnum == TargetType.section &&
+          condition.targetSectionId != null) {
         targetKey = 'S${condition.targetSectionId}';
       } else {
         continue; // Skip invalid conditions
       }
-      
+
       if (!groupedConditions.containsKey(targetKey)) {
         groupedConditions[targetKey] = [];
         targetResults[targetKey] = false; // Initialize as false
       }
       groupedConditions[targetKey]!.add(condition);
     }
-    
+
     // Evaluate each group of conditions with OR logic
     for (final entry in groupedConditions.entries) {
       final targetKey = entry.key;
       final conditions = entry.value;
-      
+
       bool anyConditionMet = false;
       dynamic firstCondition = conditions.first;
-      
+
       //print('📋 Evaluating ${conditions.length} conditions for target $targetKey');
-      
+
       for (final condition in conditions) {
-        final answer = _getAnswerValue(condition.sourceQuestionId);
+        // Use groupInstanceId when getting answer for instance-specific evaluation
+        final answer = _getAnswerValue(condition.sourceQuestionId, groupInstanceId: groupInstanceId);
         //print('   Condition: value=${condition.value}, operator=${condition.operatorEnum}');
         //print('   Answer value: $answer');
 
@@ -523,14 +595,14 @@ class SurveyDetailsViewModel extends ChangeNotifier {
           // Don't break - we want to log all conditions
         }
       }
-      
-      // Apply action based on OR result
+
+      // Apply action based on OR result - pass groupInstanceId for instance-specific visibility
       if (anyConditionMet) {
         //print('   ✅ At least one condition met → applying action');
-        _applyConditionAction(firstCondition);
+        _applyConditionAction(firstCondition, groupInstanceId: groupInstanceId);
       } else {
         //print('   ❌ No conditions met → applying reverse action');
-        _applyReverseConditionAction(firstCondition);
+        _applyReverseConditionAction(firstCondition, groupInstanceId: groupInstanceId);
       }
     }
   }
@@ -540,7 +612,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     if (condition.operatorEnum == ConditionOperator.repeatForCount) {
       return answer != null;
     }
-    
+
     if (answer == null) return false;
 
     // Convert boolean answers to text for Yes/No questions
@@ -549,7 +621,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       compareValue = answer ? "نعم" : "لا";
       //print('   🔄 Converted boolean $answer to text: $compareValue');
     }
-    
+
     // Convert choice IDs to labels for choice questions
     if (answer is int) {
       // Find the question to get its choices
@@ -564,7 +636,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         );
         compareValue = choice.label;
         //print('   🔄 Converted choice ID $answer to label: $compareValue');
-        
+
         // Special handling for question 20957 - check if choice contains "نعم"
         if (condition.sourceQuestionId == 20957 && condition.value == "نعم") {
           if (choice.label.contains("نعم")) {
@@ -579,31 +651,34 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     if (answer is List) {
       //print('   🔄 Processing List answer: $answer for condition value: "${condition.value}"');
       final sourceQuestion = _findQuestionById(condition.sourceQuestionId);
-      
+
       if (sourceQuestion != null && sourceQuestion.choices.isNotEmpty) {
         // Check if any selected item matches the condition value
         for (final item in answer) {
           String itemLabel = item.toString();
-          
+
           if (item is int) {
-            final choice = sourceQuestion.choices.where((c) => c.id == item).firstOrNull;
+            final choice = sourceQuestion.choices
+                .where((c) => c.id == item)
+                .firstOrNull;
             if (choice != null) {
               itemLabel = choice.label;
             }
           }
-          
+
           //print('      - Checking item: $item -> "$itemLabel" vs "${condition.value}"');
-          
+
           // If operator is EQUALS, we treat it as "CONTAINS" for multi-select
           // i.e., if the selected list contains the value, condition is met
           if (condition.operatorEnum == ConditionOperator.equals) {
-            if (itemLabel == condition.value || itemLabel.contains(condition.value)) {
+            if (itemLabel == condition.value ||
+                itemLabel.contains(condition.value)) {
               //print('      ✅ Match found! Condition met.');
               return true;
             }
           }
         }
-        
+
         // If we finished loop without match for Equals, return false
         if (condition.operatorEnum == ConditionOperator.equals) {
           return false;
@@ -611,20 +686,23 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       }
     }
 
-    final result = condition.operatorEnum.evaluate(compareValue, condition.value);
+    final result = condition.operatorEnum.evaluate(
+      compareValue,
+      condition.value,
+    );
     //print('   📊 Comparison: $compareValue ${condition.operatorEnum} ${condition.value} = $result');
-    
+
     return result;
   }
 
-  void _applyConditionAction(dynamic condition) {
+  void _applyConditionAction(dynamic condition, {int? groupInstanceId}) {
     final action = condition.actionEnum;
     final targetType = condition.targetTypeEnum;
 
     switch (targetType) {
       case TargetType.question:
         if (condition.targetQuestionId != null) {
-          _applyQuestionAction(condition.targetQuestionId!, action);
+          _applyQuestionAction(condition.targetQuestionId!, action, groupInstanceId: groupInstanceId);
         }
         break;
       case TargetType.group:
@@ -640,14 +718,14 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     }
   }
 
-  void _applyReverseConditionAction(dynamic condition) {
+  void _applyReverseConditionAction(dynamic condition, {int? groupInstanceId}) {
     final action = condition.actionEnum;
     final targetType = condition.targetTypeEnum;
 
     switch (targetType) {
       case TargetType.question:
         if (condition.targetQuestionId != null) {
-          _applyReverseQuestionAction(condition.targetQuestionId!, action);
+          _applyReverseQuestionAction(condition.targetQuestionId!, action, groupInstanceId: groupInstanceId);
         }
         break;
       case TargetType.group:
@@ -663,24 +741,35 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     }
   }
 
-  void _applyQuestionAction(int questionId, ConditionAction action) {
-    //print('🎯 Applying action $action to question $questionId');
+  void _applyQuestionAction(int questionId, ConditionAction action, {int? groupInstanceId}) {
     switch (action) {
       case ConditionAction.show:
-        _questionVisibility[questionId] = true;
-        //print('   ✅ Question $questionId is now VISIBLE');
+        if (groupInstanceId != null) {
+          // Instance-specific visibility
+          final instanceKey = '${questionId}_$groupInstanceId';
+          _instanceQuestionVisibility[instanceKey] = true;
+          print('✅ SHOW Question $questionId [instance $groupInstanceId] → visible=true');
+        } else {
+          // General visibility (affects all instances)
+          _questionVisibility[questionId] = true;
+          print('✅ SHOW Question $questionId → visible=true');
+        }
         break;
       case ConditionAction.hide:
-        _questionVisibility[questionId] = false;
-        //print('   ❌ Question $questionId is now HIDDEN');
+        if (groupInstanceId != null) {
+          final instanceKey = '${questionId}_$groupInstanceId';
+          _instanceQuestionVisibility[instanceKey] = false;
+          print('❌ HIDE Question $questionId [instance $groupInstanceId] → visible=false');
+        } else {
+          _questionVisibility[questionId] = false;
+          print('❌ HIDE Question $questionId → visible=false');
+        }
         break;
       case ConditionAction.require:
         _questionRequired[questionId] = true;
-        //print('   ⚠️ Question $questionId is now REQUIRED');
         break;
       case ConditionAction.disable:
         _questionVisibility[questionId] = false;
-        //print('   🚫 Question $questionId is now DISABLED (hidden)');
         break;
       case ConditionAction.repetition:
         // Not applicable to questions
@@ -688,9 +777,13 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     }
   }
 
-  void _applyGroupAction(int groupId, ConditionAction action, dynamic condition) {
+  void _applyGroupAction(
+    int groupId,
+    ConditionAction action,
+    dynamic condition,
+  ) {
     //print('📌 _applyGroupAction: groupId=$groupId, action=$action');
-    
+
     switch (action) {
       case ConditionAction.show:
         _groupVisibility[groupId] = true;
@@ -707,9 +800,13 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         final currentRepetitions = _groupRepetitions[groupId] ?? 0;
         if (currentRepetitions == 0) {
           _groupRepetitions[groupId] = 1;
-          print('✅ SHOW Group $groupId → visible=true, repetitions=1, showed ${group?.questions.length ?? 0} questions (all optional) (triggered by Q${condition?.sourceQuestionId})');
+          print(
+            '✅ SHOW Group $groupId → visible=true, repetitions=1, showed ${group?.questions.length ?? 0} questions (all optional) (triggered by Q${condition?.sourceQuestionId})',
+          );
         } else {
-          print('✅ SHOW Group $groupId → visible=true, repetitions=$currentRepetitions, showed ${group?.questions.length ?? 0} questions (all optional) (triggered by Q${condition?.sourceQuestionId})');
+          print(
+            '✅ SHOW Group $groupId → visible=true, repetitions=$currentRepetitions, showed ${group?.questions.length ?? 0} questions (all optional) (triggered by Q${condition?.sourceQuestionId})',
+          );
         }
         break;
       case ConditionAction.hide:
@@ -721,7 +818,9 @@ class SurveyDetailsViewModel extends ChangeNotifier {
             _questionVisibility[question.id] = false;
           }
         }
-        print('❌ HIDE Group $groupId → visible=false, hid ${group?.questions.length ?? 0} questions');
+        print(
+          '❌ HIDE Group $groupId → visible=false, hid ${group?.questions.length ?? 0} questions',
+        );
         break;
       case ConditionAction.require:
         _groupVisibility[groupId] = true;
@@ -734,7 +833,8 @@ class SurveyDetailsViewModel extends ChangeNotifier {
             // Make questions in conditional required groups optional
             _questionRequired[question.id] = false;
           }
-          final currentRepetitions = _groupRepetitions[groupId] ?? group.minCount;
+          final currentRepetitions =
+              _groupRepetitions[groupId] ?? group.minCount;
           if (currentRepetitions == 0) {
             _groupRepetitions[groupId] = 1;
             //print('   ⚠️ Group $groupId is now REQUIRED (visible) with 1 repetition, showed ${group.questions.length} questions');
@@ -747,9 +847,9 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         // Get the answer value and convert to int
         final answerValue = _getAnswerValue(condition.sourceQuestionId);
         //print('   answerValue from sourceQuestionId=${condition.sourceQuestionId}: $answerValue');
-        
+
         int count = 1; // Default to 1 if no value
-        
+
         if (answerValue != null) {
           if (answerValue is int) {
             count = answerValue;
@@ -759,13 +859,13 @@ class SurveyDetailsViewModel extends ChangeNotifier {
             count = int.tryParse(answerValue) ?? 1;
           }
         }
-        
+
         // Ensure count is at least minCount
         final group = _findGroupById(groupId);
         if (group != null && count < group.minCount) {
           count = group.minCount;
         }
-        
+
         //print('   ✅ Setting _groupRepetitions[$groupId] = $count');
         _groupRepetitions[groupId] = count;
         break;
@@ -787,15 +887,22 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     }
   }
 
-  void _applyReverseQuestionAction(int questionId, ConditionAction action) {
+  void _applyReverseQuestionAction(int questionId, ConditionAction action, {int? groupInstanceId}) {
     // Get the default state from the original question
     final question = _findQuestionById(questionId);
     if (question == null) return;
 
     switch (action) {
       case ConditionAction.show:
-        // Reverse of Show: return to default visibility
-        _questionVisibility[questionId] = question.isActive;
+        // Reverse of Show: HIDE the question (it was shown by condition, now condition is not met)
+        if (groupInstanceId != null) {
+          final instanceKey = '${questionId}_$groupInstanceId';
+          _instanceQuestionVisibility[instanceKey] = false;
+          print('🔄 REVERSE SHOW: Question $questionId [instance $groupInstanceId] → visible=false');
+        } else {
+          _questionVisibility[questionId] = false;
+          print('🔄 REVERSE SHOW: Question $questionId → visible=false (condition not met)');
+        }
         break;
       case ConditionAction.hide:
         // Reverse of Hide: show the question
@@ -826,11 +933,11 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         // It might be visible due to another condition from a different question
         // Only hide if it was originally hidden (default state)
         final currentVisibility = _groupVisibility[groupId] ?? false;
-        
+
         // Special handling for Group 101 - check if any other condition is met
         if (groupId == 101 && currentVisibility) {
           //print('   Group 101 is currently visible, checking other conditions before hiding...');
-          
+
           // Check if any target condition for this group is met
           bool anyConditionMet = false;
           for (final section in _survey?.sections ?? []) {
@@ -849,7 +956,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
             }
             if (anyConditionMet) break;
           }
-          
+
           if (!anyConditionMet) {
             _groupVisibility[groupId] = false;
             _clearGroupAnswers(groupId);
@@ -863,19 +970,21 @@ class SurveyDetailsViewModel extends ChangeNotifier {
             for (final grp in section.questionGroups) {
               if (grp.id == groupId) {
                 hasShowConditions = grp.targetConditions.any(
-                  (c) => c.actionEnum == ConditionAction.show
+                  (c) => c.actionEnum == ConditionAction.show,
                 );
                 break;
               }
             }
             if (hasShowConditions) break;
           }
-          
+
           if (hasShowConditions) {
             // This group has Show conditions, so hide it when not met
             _groupVisibility[groupId] = false;
             _clearGroupAnswers(groupId);
-            print('🔄 REVERSE SHOW: Group $groupId → visible=false (conditions not met)');
+            print(
+              '🔄 REVERSE SHOW: Group $groupId → visible=false (conditions not met)',
+            );
           } else if (!group.isActive) {
             // Only hide if the group was originally hidden by default
             _groupVisibility[groupId] = false;
@@ -904,7 +1013,9 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         if (group.minCount == 0) {
           _groupVisibility[groupId] = false;
           _clearGroupAnswers(groupId);
-          print('🔄 REVERSE REPETITION: Group $groupId → visible=false, repetitions=0 (minCount=0)');
+          print(
+            '🔄 REVERSE REPETITION: Group $groupId → visible=false, repetitions=0 (minCount=0)',
+          );
         } else {
           //print('   ℹ️ Group $groupId returned to minCount=${group.minCount}');
         }
@@ -971,7 +1082,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
 
   Future<void> _clearGroupAnswers(int groupId) async {
     if (_surveyAnswers == null) return;
-    
+
     // Find the group to access its questions
     final group = _findGroupById(groupId);
     if (group != null) {
@@ -979,19 +1090,25 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       for (final question in group.questions) {
         _questionVisibility[question.id] = false;
       }
-      print('🗑️ _clearGroupAnswers: Group $groupId → hid ${group.questions.length} questions');
+      print(
+        '🗑️ _clearGroupAnswers: Group $groupId → hid ${group.questions.length} questions',
+      );
     }
-    
+
     // Count answers before clearing
-    final answersCount = _surveyAnswers!.answers.where((a) => a.groupId == groupId).length;
-    
+    final answersCount = _surveyAnswers!.answers
+        .where((a) => a.groupId == groupId)
+        .length;
+
     if (answersCount == 0) return; // Nothing to clear
-    
+
     // Remove all answers for this group
     _surveyAnswers = _surveyAnswers!.copyWith(
-      answers: _surveyAnswers!.answers.where((a) => a.groupId != groupId).toList(),
+      answers: _surveyAnswers!.answers
+          .where((a) => a.groupId != groupId)
+          .toList(),
     );
-    
+
     // Save the updated answers
     await repository.saveSurveyAnswers(surveyAnswers: _surveyAnswers!);
   }
@@ -1000,8 +1117,9 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     // If groupInstanceId is provided, search for that specific instance
     // If null, search for any instance of this question
     final answer = _surveyAnswers?.answers.firstWhere(
-      (a) => a.questionId == questionId && 
-             (groupInstanceId == null || a.groupInstanceId == groupInstanceId),
+      (a) =>
+          a.questionId == questionId &&
+          (groupInstanceId == null || a.groupInstanceId == groupInstanceId),
       orElse: () => AnswerModel(
         questionId: questionId,
         questionCode: '',
@@ -1014,8 +1132,24 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     return value;
   }
 
-  bool isQuestionVisible(int questionId) {
-    return _questionVisibility[questionId] ?? true;
+  bool isQuestionVisible(int questionId, {int? groupInstanceId}) {
+    // First check instance-specific visibility if groupInstanceId is provided
+    if (groupInstanceId != null) {
+      final instanceKey = '${questionId}_$groupInstanceId';
+      if (_instanceQuestionVisibility.containsKey(instanceKey)) {
+        final result = _instanceQuestionVisibility[instanceKey]!;
+        if (questionId == 30861) {
+          print('🔍 isQuestionVisible(30861, instance=$groupInstanceId): found in _instanceQuestionVisibility → $result');
+        }
+        return result;
+      }
+    }
+    // Fall back to general question visibility
+    final result = _questionVisibility[questionId] ?? true;
+    if (questionId == 30861) {
+      print('🔍 isQuestionVisible(30861, instance=$groupInstanceId): fallback to _questionVisibility → $result');
+    }
+    return result;
   }
 
   bool isGroupVisible(int groupId) {
@@ -1042,21 +1176,28 @@ class SurveyDetailsViewModel extends ChangeNotifier {
 
   /// Checks if a specific question is currently triggering a conditional group
   /// Returns true if THIS question's answer meets any condition (Show or Repetition)
-  bool isQuestionTriggeringGroup(int groupId, int questionId, {int? groupInstanceId}) {
+  bool isQuestionTriggeringGroup(
+    int groupId,
+    int questionId, {
+    int? groupInstanceId,
+  }) {
     final group = _findGroupById(groupId);
     if (group == null || group.targetConditions.isEmpty) {
       return false;
     }
-    
+
     // Check if THIS question is the source for any condition of this group
     for (final condition in group.targetConditions) {
       if (condition.sourceQuestionId != questionId) {
         continue;
       }
-      
+
       // Get answer for this specific instance
-      final answer = _getAnswerValue(questionId, groupInstanceId: groupInstanceId);
-      
+      final answer = _getAnswerValue(
+        questionId,
+        groupInstanceId: groupInstanceId,
+      );
+
       // For Show conditions: check if the condition is met
       if (condition.actionEnum == ConditionAction.show) {
         final isMet = _isConditionMet(answer, condition);
@@ -1081,7 +1222,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         }
       }
     }
-    
+
     return false;
   }
 
@@ -1093,14 +1234,14 @@ class SurveyDetailsViewModel extends ChangeNotifier {
   }) async {
     //print('💾 saveAnswer called: questionId=$questionId, code=$questionCode, value=$value');
     //print('   _surveyAnswers is null? ${_surveyAnswers == null}');
-    
+
     // Special debug for nationality questions
     if (questionId == 20906 || questionId == 20911) {
       //print('🌟🌟🌟 SAVING NATIONALITY QUESTION Q$questionId 🌟🌟🌟');
       //print('   Value: $value (type: ${value.runtimeType})');
       //print('   This should trigger Group 101 (الجنسية) if value is "اخري" choice');
     }
-    
+
     if (_surveyAnswers == null) {
       //print('   ❌ EARLY RETURN: _surveyAnswers is null!');
       return;
@@ -1111,12 +1252,12 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     // Find the question to get its type and groupId
     QuestionModel? question;
     int? groupId;
-    
+
     //print('   🔍 Searching for question $questionId in ${_survey?.sections?.length ?? 0} sections');
-    
+
     for (final section in _survey?.sections ?? []) {
       //print('      Checking section ${section.id}: ${section.questions.length} direct questions, ${section.questionGroups.length} groups');
-      
+
       // Search in direct questions
       for (final q in section.questions) {
         if (q.id == questionId) {
@@ -1125,7 +1266,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
           break;
         }
       }
-      
+
       // Search in groups
       if (question == null) {
         for (final group in section.questionGroups) {
@@ -1141,7 +1282,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
           if (question != null) break;
         }
       }
-      
+
       if (question != null) break;
     }
 
@@ -1158,7 +1299,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       questionType: question?.type, // Add question type
       groupId: groupId, // Add group ID if in a group
     );
-    
+
     //print('   📋 Final answer: questionType=${question?.type}, groupId=$groupId, groupInstanceId=$groupInstanceId');
 
     final result = await repository.saveAnswer(
@@ -1189,8 +1330,13 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         _surveyAnswers = _surveyAnswers!.copyWith(answers: updatedAnswers);
 
         //print('🔄 Re-evaluating conditions after saving answer...');
-        // Re-evaluate conditions
+        // Re-evaluate conditions - pass groupInstanceId for instance-specific evaluation
         _evaluateAllConditions();
+        
+        // Also evaluate instance-specific conditions if this question has sourceConditions
+        if (question != null && question.sourceConditions.isNotEmpty && groupInstanceId != null) {
+          _evaluateQuestionConditions(question, groupInstanceId: groupInstanceId);
+        }
 
         notifyListeners();
       },
@@ -1219,7 +1365,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       },
       (_) async {
         _surveyAnswers = completedAnswers;
-        
+
         // Auto export to Excel
         try {
           final excelService = ExcelExportServiceSyncfusion();
@@ -1232,11 +1378,11 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         } catch (e) {
           //print('⚠️ Auto export failed: $e');
         }
-        
+
         // Delete draft version after successful completion
         await repository.deleteSurveyAnswers(surveyId: _survey!.id);
         //print('✅ Survey completed, saved locally, and exported to Excel');
-        
+
         _setState(SurveyDetailsState.loaded);
       },
     );
@@ -1252,10 +1398,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     final sections = _survey!.sections!
         .where((section) => isSectionVisible(section.id))
         .toList();
-    
+
     // Sort by order to maintain JSON order
     sections.sort((a, b) => a.order.compareTo(b.order));
-    
+
     return sections;
   }
 
@@ -1263,45 +1409,41 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     final visibleGroups = section.questionGroups
         .where((group) => isGroupVisible(group.id))
         .toList();
-    
+
     // Sort by order to maintain JSON order
     visibleGroups.sort((a, b) => a.order.compareTo(b.order));
-    
+
     //print('📦 getVisibleGroups for section ${section.id}:');
     for (var group in section.questionGroups) {
       //print('   Group ${group.id} (${group.code}): visible=${isGroupVisible(group.id)}, repetitions=${getGroupRepetitions(group.id)}');
     }
-    
+
     return visibleGroups;
   }
 
-  List<QuestionModel> getVisibleQuestions(
-      {SectionModel? section, QuestionGroupModel? group}) {
+  List<QuestionModel> getVisibleQuestions({
+    SectionModel? section,
+    QuestionGroupModel? group,
+    int? groupInstanceId,
+  }) {
     if (group != null) {
       final allQuestions = group.questions;
-      final visibleQuestions = allQuestions
-          .where((question) => isQuestionVisible(question.id))
-          .toList();
-      
+      // For repeating groups, we return ALL questions and let the UI filter by instance
+      // This is because conditional questions may be visible in some instances but not others
+      final visibleQuestions = allQuestions.toList();
+
       // Sort by order to maintain JSON order
       visibleQuestions.sort((a, b) => a.order.compareTo(b.order));
-      
-      //print('📋 getVisibleQuestions for group ${group.id}: ${visibleQuestions.length}/${allQuestions.length} visible');
-      for (var q in allQuestions) {
-        final visible = isQuestionVisible(q.id);
-        if (!visible) {
-          //print('   ❌ Question ${q.id} (${q.code}) is HIDDEN');
-        }
-      }
+
       return visibleQuestions;
     } else if (section != null) {
       final visibleQuestions = section.questions
           .where((question) => isQuestionVisible(question.id))
           .toList();
-      
+
       // Sort by order to maintain JSON order
       visibleQuestions.sort((a, b) => a.order.compareTo(b.order));
-      
+
       return visibleQuestions;
     }
     return [];
@@ -1309,10 +1451,11 @@ class SurveyDetailsViewModel extends ChangeNotifier {
 
   AnswerModel? getAnswer({required int questionId, int? groupInstanceId}) {
     if (_surveyAnswers == null) return null;
-    
+
     try {
       return _surveyAnswers!.answers.firstWhere(
-        (a) => a.questionId == questionId && a.groupInstanceId == groupInstanceId,
+        (a) =>
+            a.questionId == questionId && a.groupInstanceId == groupInstanceId,
       );
     } catch (e) {
       return null;
@@ -1327,19 +1470,19 @@ class SurveyDetailsViewModel extends ChangeNotifier {
 
     try {
       _setState(SurveyDetailsState.saving);
-      
+
       // Ensure completedAt is set before export
       if (_surveyAnswers!.completedAt == null) {
         _surveyAnswers = _surveyAnswers!.copyWith(
           completedAt: DateTime.now(),
           isDraft: false,
         );
-        
+
         // Save updated survey answers
         await repository.saveSurveyAnswers(surveyAnswers: _surveyAnswers!);
         //print('✅ Set completedAt before export: ${_surveyAnswers!.completedAt}');
       }
-      
+
       // Export to daily Excel file
       //print('📊 Exporting to Excel with groupRepetitions: $_groupRepetitions');
       final excelService = ExcelExportServiceSyncfusion();
@@ -1376,7 +1519,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
           completedAt: DateTime.now(),
           isDraft: false,
         );
-        
+
         // Save updated survey answers
         await repository.saveSurveyAnswers(surveyAnswers: _surveyAnswers!);
         //print('✅ Set completedAt before export: ${_surveyAnswers!.completedAt}');
@@ -1398,7 +1541,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       //print('✅ Data kept in local storage for survey ${_survey!.id}');
 
       _setState(SurveyDetailsState.loaded);
-      
+
       return {
         'success': true,
         'filePath': filePath,
@@ -1429,13 +1572,15 @@ class SurveyDetailsViewModel extends ChangeNotifier {
 
       // Get all completed surveys from local storage
       final result = await repository.getAllCompletedAnswers();
-      
+
       List<SurveyAnswersModel> completedSurveys = [];
       result.fold(
-        (failure) => throw Exception('Failed to load completed surveys: ${failure.message}'),
+        (failure) => throw Exception(
+          'Failed to load completed surveys: ${failure.message}',
+        ),
         (surveys) => completedSurveys = surveys,
       );
-      
+
       if (completedSurveys.isEmpty) {
         _setState(SurveyDetailsState.loaded);
         return {
@@ -1459,37 +1604,60 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       // Upload each survey one by one
       for (int i = 0; i < completedSurveys.length; i++) {
         final surveyAnswers = completedSurveys[i];
-        
+
         try {
-          //print('📤 Uploading survey ${i + 1}/${completedSurveys.length}: Survey ID ${surveyAnswers.surveyId}');
-          
+          print(
+            '📤 Uploading survey ${i + 1}/${completedSurveys.length}: Survey ID ${surveyAnswers.surveyId}',
+          );
+
           // Convert to API format
-          final apiData = QuestionnaireRemoteDataSourceImpl.convertToApiFormat(surveyAnswers);
-          
+          final apiData = QuestionnaireRemoteDataSourceImpl.convertToApiFormat(
+            surveyAnswers,
+          );
+
           // Submit to API
-          final success = await apiDataSource.submitQuestionnaire(apiData);
-          
-          if (success) {
+          final response = await apiDataSource.submitQuestionnaire(apiData);
+
+          print('📥 رد السيرفر الكامل:');
+          print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          print(response);
+          print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+          // Check if upload was successful
+          bool isSuccess = false;
+          if (response is Map) {
+            // Check for error code
+            final errorCode = response['errorCode'];
+            isSuccess = errorCode == null || errorCode == 0;
+          } else {
+            // If response is not a map, consider it successful
+            isSuccess = response != null;
+          }
+
+          if (isSuccess) {
             uploaded++;
-            //print('✅ Survey ${i + 1} uploaded successfully');
-            
+            print('✅ Survey ${i + 1} uploaded successfully');
+
             // Delete from local storage after successful upload
-            final key = 'survey_${surveyAnswers.surveyId}_${surveyAnswers.completedAt?.millisecondsSinceEpoch}';
+            final key =
+                'survey_${surveyAnswers.surveyId}_${surveyAnswers.completedAt?.millisecondsSinceEpoch}';
             await repository.deleteCompletedSurveyAnswer(key);
-            //print('🗑️ Deleted from local storage');
+            print('🗑️ Deleted from local storage');
           } else {
             failed++;
-            failedSurveys.add('Survey ${surveyAnswers.surveyId}');
-            //print('⚠️ Survey ${i + 1} upload returned false');
+            final errorMsg = response is Map
+                ? response['errorMessage'] ?? 'Unknown error'
+                : 'Upload failed';
+            failedSurveys.add('Survey ${surveyAnswers.surveyId}: $errorMsg');
+            print('⚠️ Survey ${i + 1} upload failed: $errorMsg');
           }
-          
+
           // Small delay between uploads
           await Future.delayed(const Duration(milliseconds: 500));
-          
         } catch (e) {
           failed++;
           failedSurveys.add('Survey ${surveyAnswers.surveyId}: $e');
-          //print('❌ Error uploading survey ${i + 1}: $e');
+          print('❌ Error uploading survey ${i + 1}: $e');
         }
       }
 
@@ -1521,10 +1689,13 @@ class SurveyDetailsViewModel extends ChangeNotifier {
   /// Get Excel file info for current survey
   Future<Map<String, dynamic>?> getExcelFileInfo() async {
     if (_survey == null) return null;
-    
+
     try {
       final excelService = ExcelExportServiceSyncfusion();
-      return await excelService.getSurveyExcelFileInfo(_survey!.id, _survey!.code);
+      return await excelService.getSurveyExcelFileInfo(
+        _survey!.id,
+        _survey!.code,
+      );
     } catch (e) {
       //print('Error getting Excel file info: $e');
       return null;
@@ -1535,18 +1706,18 @@ class SurveyDetailsViewModel extends ChangeNotifier {
   /// This resets the form to empty state
   void clearFormAnswers() {
     //print('🗑️ Clearing all form answers from memory...');
-    
+
     if (_surveyAnswers != null) {
       // Clear the answers list
       _surveyAnswers!.answers.clear();
       //print('✅ Cleared ${_surveyAnswers!.answers.length} answers');
-      
+
       // Reset visibility and conditions to initial state
       if (_survey != null) {
         _initializeVisibilityAndRequirements();
         _evaluateAllConditions();
       }
-      
+
       notifyListeners();
       //print('✅ Form answers cleared successfully');
     }

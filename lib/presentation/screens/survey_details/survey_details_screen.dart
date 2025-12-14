@@ -885,6 +885,16 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                     }
                   }
 
+                  // Check instance-specific visibility for conditional questions
+                  final isVisible = viewModel.isQuestionVisible(question.id, groupInstanceId: effectiveInstanceId);
+                  if (!isVisible) {
+                    // Debug: why is this question hidden?
+                    if (question.id == 30861) {
+                      print('🔍 DEBUG Q30861: effectiveInstanceId=$effectiveInstanceId, isVisible=$isVisible');
+                    }
+                    continue; // Skip hidden questions for this instance
+                  }
+
                   // Find answer for this question and instance
                   AnswerModel? answer;
                   try {
@@ -1014,9 +1024,10 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
         instanceIndex++
       ) {
         for (final question in group.questions) {
-          if (!viewModel.isQuestionVisible(question.id)) {
+          // Check instance-specific visibility
+          if (!viewModel.isQuestionVisible(question.id, groupInstanceId: instanceIndex)) {
             print(
-              '      ⏭️ Q${question.id} (${question.code}): HIDDEN - skipped',
+              '      ⏭️ Q${question.id} (${question.code}) [instance $instanceIndex]: HIDDEN - skipped',
             );
             continue;
           }
