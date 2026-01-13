@@ -58,6 +58,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
   DateTime? _startTime;
   double? _latitude;
   double? _longitude;
+  int? _buildingFloorsCount;
+  int? _apartmentsPerFloor;
+  int? _selectedFloor;
+  int? _selectedApartment;
 
   void setPreSurveyInfo({
     String? researcherName,
@@ -73,6 +77,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     DateTime? startTime,
     double? latitude,
     double? longitude,
+    int? buildingFloorsCount,
+    int? apartmentsPerFloor,
+    int? selectedFloor,
+    int? selectedApartment,
   }) {
     _researcherName = researcherName;
     _supervisorName = supervisorName;
@@ -87,7 +95,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     _startTime = startTime;
     _latitude = latitude;
     _longitude = longitude;
-    //print('📝 Pre-survey info set: researcher=$researcherName, supervisor=$supervisorName, city=$cityName, IDs: [$researcherId, $supervisorId, $cityId], startTime=$startTime, location=($latitude, $longitude)');
+    _buildingFloorsCount = buildingFloorsCount;
+    _apartmentsPerFloor = apartmentsPerFloor;
+    _selectedFloor = selectedFloor;
+    _selectedApartment = selectedApartment;
   }
 
   Future<void> loadSurvey(int surveyId) async {
@@ -131,6 +142,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
               cityId: _cityId,
               latitude: _latitude,
               longitude: _longitude,
+              buildingFloorsCount: _buildingFloorsCount,
+              apartmentsPerFloor: _apartmentsPerFloor,
+              selectedFloor: _selectedFloor,
+              selectedApartment: _selectedApartment,
             );
             //print('   _surveyAnswers created with: researcher=${_researcherName}, supervisor=${_supervisorName}, city=${_cityName}');
             //print('   IDs: researcher=$_researcherId, supervisor=$_supervisorId, city=$_cityId');
@@ -164,6 +179,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                 cityId: _cityId,
                 latitude: _latitude,
                 longitude: _longitude,
+                buildingFloorsCount: _buildingFloorsCount,
+                apartmentsPerFloor: _apartmentsPerFloor,
+                selectedFloor: _selectedFloor,
+                selectedApartment: _selectedApartment,
               );
 
               // Save immediately
@@ -190,6 +209,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                   cityId: _cityId,
                   latitude: _latitude,
                   longitude: _longitude,
+                  buildingFloorsCount: _buildingFloorsCount,
+                  apartmentsPerFloor: _apartmentsPerFloor,
+                  selectedFloor: _selectedFloor,
+                  selectedApartment: _selectedApartment,
                 );
               } else {
                 // Has answers
@@ -215,6 +238,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                   cityId: _cityId,
                   latitude: _latitude,
                   longitude: _longitude,
+                  buildingFloorsCount: _buildingFloorsCount,
+                  apartmentsPerFloor: _apartmentsPerFloor,
+                  selectedFloor: _selectedFloor,
+                  selectedApartment: _selectedApartment,
                   startedAt: newStartTime, // Update start time!
                 );
                 //print('   Updated: researcher=${_researcherName}, supervisor=${_supervisorName}, city=${_cityName}');

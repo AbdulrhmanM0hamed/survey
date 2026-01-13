@@ -1,10 +1,12 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:survey/data/models/management_information_model.dart';
 import 'package:survey/data/datasources/management_information_remote_datasource.dart';
 import 'package:survey/data/datasources/local/management_information_local_datasource.dart';
 import 'package:survey/presentation/screens/consent/consent_screen.dart';
-import 'package:dio/dio.dart';
+import 'package:survey/core/di/injection.dart';
 
 class PreSurveyInfoScreen extends StatefulWidget {
   final int surveyId;
@@ -24,20 +26,23 @@ class PreSurveyInfoScreen extends StatefulWidget {
 
 class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _random = Random();
 
-  ManagementInformationModel? _selectedResearcher;
-  ManagementInformationModel? _selectedSupervisor;
+  // City selection
   ManagementInformationModel? _selectedCity;
+  List<ManagementInformationModel> _cities = [];
+  bool _isLoadingCities = true;
+  String? _citiesError;
 
+  // Text Controllers
   final TextEditingController _neighborhoodController = TextEditingController();
   final TextEditingController _streetController = TextEditingController();
+  final TextEditingController _floorsController = TextEditingController();
+  final TextEditingController _apartmentsController = TextEditingController();
 
-  List<ManagementInformationModel> _researchers = [];
-  List<ManagementInformationModel> _supervisors = [];
-  List<ManagementInformationModel> _cities = [];
-
-  bool _isLoading = true;
-  String? _errorMessage;
+  // Random selections for building
+  int? _selectedFloor;
+  int? _selectedApartment;
 
   late ManagementInformationRemoteDataSource _remoteDataSource;
   late ManagementInformationLocalDataSource _localDataSource;
@@ -45,129 +50,102 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize data sources
-    final dio = Dio(BaseOptions(baseUrl: 'http://45.94.209.137:8080/api'));
-    _remoteDataSource = ManagementInformationRemoteDataSourceImpl(dio: dio);
+    _remoteDataSource = ManagementInformationRemoteDataSourceImpl(dioClient: Injection.dioClient);
     _localDataSource = ManagementInformationLocalDataSourceImpl();
-    _loadData();
+    _loadCities();
   }
 
   @override
   void dispose() {
     _neighborhoodController.dispose();
     _streetController.dispose();
+    _floorsController.dispose();
+    _apartmentsController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadCities() async {
     setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+      _isLoadingCities = true;
+      _citiesError = null;
     });
 
     try {
-      // Check network connectivity
       final connectivityResult = await Connectivity().checkConnectivity();
       final hasConnection =
           connectivityResult.contains(ConnectivityResult.mobile) ||
           connectivityResult.contains(ConnectivityResult.wifi) ||
           connectivityResult.contains(ConnectivityResult.ethernet);
 
-      List<ManagementInformationResponse> results;
+      ManagementInformationResponse? citiesResponse;
 
       if (hasConnection) {
-        // Try to fetch from remote
         try {
-          results = await Future.wait([
-            _remoteDataSource.getManagementInformations(
-              ManagementInformationType.researcherName,
-            ),
-            _remoteDataSource.getManagementInformations(
-              ManagementInformationType.supervisorName,
-            ),
-            _remoteDataSource.getManagementInformations(
-              ManagementInformationType.cityName,
-            ),
-          ]);
-
-          // Cache the results
-          await Future.wait([
-            _localDataSource.cacheManagementInformations(
-              ManagementInformationType.researcherName,
-              results[0],
-            ),
-            _localDataSource.cacheManagementInformations(
-              ManagementInformationType.supervisorName,
-              results[1],
-            ),
-            _localDataSource.cacheManagementInformations(
-              ManagementInformationType.cityName,
-              results[2],
-            ),
-          ]);
-
-          ////print('✅ Data fetched from API and cached');
+          citiesResponse = await _remoteDataSource.getManagementInformations(
+            ManagementInformationType.cityName,
+          );
+          await _localDataSource.cacheManagementInformations(
+            ManagementInformationType.cityName,
+            citiesResponse,
+          );
         } catch (e) {
-          ////print('⚠️ API failed, trying cache: $e');
-          // If API fails, try cache
-          results = await _loadFromCache();
+          citiesResponse = await _localDataSource.getCachedManagementInformations(
+            ManagementInformationType.cityName,
+          );
         }
       } else {
-        ////print('📡 No internet, loading from cache');
-        // No connection, use cache
-        results = await _loadFromCache();
+        citiesResponse = await _localDataSource.getCachedManagementInformations(
+          ManagementInformationType.cityName,
+        );
       }
 
       setState(() {
-        _researchers = results[0].items;
-        _supervisors = results[1].items;
-        _cities = results[2].items;
-        _isLoading = false;
+        _cities = citiesResponse?.items ?? [];
+        _isLoadingCities = false;
       });
     } catch (e) {
       setState(() {
-        _errorMessage = 'فشل تحميل البيانات: $e';
-        _isLoading = false;
+        _citiesError = 'فشل تحميل المدن';
+        _isLoadingCities = false;
       });
     }
   }
 
-  Future<List<ManagementInformationResponse>> _loadFromCache() async {
-    final researchers = await _localDataSource.getCachedManagementInformations(
-      ManagementInformationType.researcherName,
-    );
-    final supervisors = await _localDataSource.getCachedManagementInformations(
-      ManagementInformationType.supervisorName,
-    );
-    final cities = await _localDataSource.getCachedManagementInformations(
-      ManagementInformationType.cityName,
-    );
-
-    if (researchers == null || supervisors == null || cities == null) {
-      throw Exception('لا توجد بيانات محفوظة. يرجى الاتصال بالإنترنت أولاً.');
+  void _generateRandomFloor() {
+    final floors = int.tryParse(_floorsController.text);
+    if (floors != null && floors > 0) {
+      setState(() {
+        _selectedFloor = _random.nextInt(floors) + 1;
+      });
     }
+  }
 
-    return [researchers, supervisors, cities];
+  void _generateRandomApartment() {
+    final apartments = int.tryParse(_apartmentsController.text);
+    if (apartments != null && apartments > 0) {
+      setState(() {
+        _selectedApartment = _random.nextInt(apartments) + 1;
+      });
+    }
   }
 
   void _continue() {
     if (_formKey.currentState!.validate()) {
-      // Navigate to consent screen
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => ConsentScreen(
             surveyId: widget.surveyId,
             surveyCode: widget.surveyCode,
-            researcherName: _selectedResearcher?.name,
-            supervisorName: _selectedSupervisor?.name,
             cityName: _selectedCity?.name,
-            researcherId: _selectedResearcher?.id,
-            supervisorId: _selectedSupervisor?.id,
             cityId: _selectedCity?.id,
             neighborhoodName: _neighborhoodController.text.trim(),
             streetName: _streetController.text.trim(),
             startTime: widget.startTime,
+            buildingFloorsCount: int.tryParse(_floorsController.text),
+            apartmentsPerFloor: int.tryParse(_apartmentsController.text),
+            selectedFloor: _selectedFloor,
+            selectedApartment: _selectedApartment,
           ),
         ),
       );
@@ -182,286 +160,192 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
         appBar: AppBar(
           title: const Text('معلومات ما قبل الاستبيان'),
           centerTitle: true,
-          backgroundColor: Color(0xff25935F),
+          backgroundColor: const Color(0xff25935F),
           foregroundColor: Colors.white,
         ),
-        body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : _errorMessage != null
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: Colors.red,
+        body: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              // Header
+              const Card(
+                color: Color(0xff25935F),
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      Icon(Icons.info_outline, size: 48, color: Colors.white),
+                      SizedBox(height: 8),
+                      Text(
+                        'يرجى إدخال المعلومات التالية قبل البدء',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          _errorMessage!,
-                          style: const TextStyle(fontSize: 16),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton.icon(
-                          onPressed: _loadData,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('إعادة المحاولة'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xff25935F),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 32,
-                              vertical: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : Form(
-                    key: _formKey,
-                    child: ListView(
-                      padding: const EdgeInsets.all(20),
-                      children: [
-                        // Header
-                        const Card(
-                          color: Color(0xff25935F),
-                          child: Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.info_outline,
-                                  size: 48,
-                                  color: Colors.white,
-                                ),
-                                SizedBox(height: 8),
-                                Text(
-                                  'يرجى اختيار المعلومات التالية قبل البدء',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Researcher Name (only show if has data)
-                        if (_researchers.isNotEmpty) ...[
-                          _buildDropdownCard(
-                            title: 'اسم الباحث',
-                            icon: Icons.person,
-                            items: _researchers,
-                            selectedValue: _selectedResearcher,
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedResearcher = value;
-                              });
-                            },
-                            validator: (value) {
-                              if (value == null) {
-                                return 'يرجى اختيار اسم الباحث';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-
-                        // Supervisor Name (only show if has data)
-                        if (_supervisors.isNotEmpty) ...[
-                          _buildDropdownCard(
-                            title: 'اسم المشرف',
-                            icon: Icons.supervisor_account,
-                            items: _supervisors,
-                            selectedValue: _selectedSupervisor,
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedSupervisor = value;
-                              });
-                            },
-                            validator: (value) {
-                              if (value == null) {
-                                return 'يرجى اختيار اسم المشرف';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-
-                        // City Name (Radio Buttons - only show if has data)
-                        if (_cities.isNotEmpty) Card(
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Color(0xff25935F).withValues(alpha: 0.05),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: const Icon(Icons.location_city, color: Color(0xff25935F), size: 24),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    const Text(
-                                      'اسم المدينة',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    Container(
-                                      width: 12,
-                                      height: 12,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: _selectedCity != null ? Colors.green : Colors.red,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                if (_cities.isEmpty)
-                                  const Padding(
-                                    padding: EdgeInsets.all(8.0),
-                                    child: Text('لا توجد مدن متاحة'),
-                                  )
-                                else
-                                  ..._cities.map((city) {
-                                    return RadioListTile<ManagementInformationModel>(
-                                      title: Text(city.name),
-                                      value: city,
-                                      groupValue: _selectedCity,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _selectedCity = value;
-                                        });
-                                      },
-                                      activeColor: const Color(0xff25935F),
-                                      contentPadding: EdgeInsets.zero,
-                                    );
-                                  }),
-                                if (_selectedCity == null)
-                                  // Hidden validator to ensure selection
-                                  FormField<ManagementInformationModel>(
-                                    validator: (value) {
-                                      if (_selectedCity == null) return 'يرجى اختيار المدينة';
-                                      return null;
-                                    },
-                                    builder: (state) {
-                                      if (state.hasError) {
-                                        return Padding(
-                                          padding: const EdgeInsets.only(top: 8.0, right: 12.0),
-                                          child: Text(
-                                            state.errorText!,
-                                            style: TextStyle(
-                                              color: Theme.of(context).colorScheme.error,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                      return const SizedBox.shrink();
-                                    },
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Neighborhood Name
-                        _buildTextFieldCard(
-                          title: 'اسم الحى / القرية',
-                          icon: Icons.home_work,
-                          controller: _neighborhoodController,
-                          hintText: 'أدخل اسم الحى أو القرية',
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'يرجى إدخال اسم الحى / القرية';
-                            }
-                            return null;
-                          },
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Street Name
-                        _buildTextFieldCard(
-                          title: 'اسم الشارع',
-                          icon: Icons.signpost,
-                          controller: _streetController,
-                          hintText: 'أدخل اسم الشارع',
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'يرجى إدخال اسم الشارع';
-                            }
-                            return null;
-                          },
-                        ),
-
-                        const SizedBox(height: 32),
-
-                        // Continue Button
-                        ElevatedButton(
-                          onPressed: _continue,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xff25935F),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'المتابعة',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(width: 8),
-                              Icon(Icons.arrow_forward),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 45),
-                      ],
-                    ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // City Selection (Radio Buttons)
+              _buildCitySelectionCard(),
+              const SizedBox(height: 16),
+
+              // Neighborhood Name
+              _buildTextFieldCard(
+                title: 'اسم الحى / القرية',
+                icon: Icons.home_work,
+                controller: _neighborhoodController,
+                hintText: 'أدخل اسم الحى أو القرية',
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'يرجى إدخال اسم الحى / القرية';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Street Name
+              _buildTextFieldCard(
+                title: 'اسم الشارع',
+                icon: Icons.signpost,
+                controller: _streetController,
+                hintText: 'أدخل اسم الشارع',
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'يرجى إدخال اسم الشارع';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 32),
+
+              // Building Selection Section Header
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xff25935F), Color(0xff1d7a4d)],
+                    begin: Alignment.topRight,
+                    end: Alignment.bottomLeft,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.apartment, size: 32, color: Colors.white),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'تحديد الشقة المراد زيارتها عشوائياً',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Floors Count Field
+              _buildNumberFieldCard(
+                title: 'عدد الأدوار في المبنى',
+                icon: Icons.layers,
+                controller: _floorsController,
+                hintText: 'أدخل العدد',
+                onChanged: (value) {
+                  setState(() {
+                    _selectedFloor = null;
+                  });
+                  if (value.isNotEmpty) {
+                    _generateRandomFloor();
+                  }
+                },
+                selectedValue: _selectedFloor,
+                selectedLabel: 'الدور المختار',
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'يرجى إدخال عدد الأدوار';
+                  }
+                  final num = int.tryParse(value);
+                  if (num == null || num <= 0) {
+                    return 'يرجى إدخال رقم صحيح أكبر من صفر';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Apartments Count Field
+              _buildNumberFieldCard(
+                title: 'عدد الشقق في الدور',
+                icon: Icons.door_front_door,
+                controller: _apartmentsController,
+                hintText: 'أدخل العدد',
+                onChanged: (value) {
+                  setState(() {
+                    _selectedApartment = null;
+                  });
+                  if (value.isNotEmpty) {
+                    _generateRandomApartment();
+                  }
+                },
+                selectedValue: _selectedApartment,
+                selectedLabel: 'الشقة المختارة',
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'يرجى إدخال عدد الشقق';
+                  }
+                  final num = int.tryParse(value);
+                  if (num == null || num <= 0) {
+                    return 'يرجى إدخال رقم صحيح أكبر من صفر';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 32),
+
+              // Continue Button
+              ElevatedButton(
+                onPressed: _continue,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xff25935F),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'المتابعة',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(width: 8),
+                    Icon(Icons.arrow_forward),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 45),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildDropdownCard({
-    required String title,
-    required IconData icon,
-    required List<ManagementInformationModel> items,
-    required ManagementInformationModel? selectedValue,
-    required void Function(ManagementInformationModel?) onChanged,
-    required String? Function(ManagementInformationModel?) validator,
-  }) {
+  Widget _buildCitySelectionCard() {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -475,18 +359,15 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Color(0xff25935F).withValues(alpha: 0.05),
+                    color: const Color(0xff25935F).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: Color(0xff25935F), size: 24),
+                  child: const Icon(Icons.location_city, color: Color(0xff25935F), size: 24),
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                const Text(
+                  'اسم المدينة',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 const Spacer(),
                 Container(
@@ -494,52 +375,73 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                   height: 12,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: selectedValue != null ? Colors.green : Colors.red,
+                    color: _selectedCity != null ? Colors.green : Colors.red,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            DropdownButtonFormField<ManagementInformationModel>(
-              value: selectedValue,
-              isExpanded: true,
-              decoration: InputDecoration(
-                hintText: ' $title',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+            if (_isLoadingCities)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(),
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
+              )
+            else if (_citiesError != null)
+              Center(
+                child: Column(
+                  children: [
+                    Text(_citiesError!, style: const TextStyle(color: Colors.red)),
+                    TextButton(
+                      onPressed: _loadCities,
+                      child: const Text('إعادة المحاولة'),
+                    ),
+                  ],
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(
-                    color: Color(0xff25935F),
-                    width: 2,
-                  ),
-                ),
-                filled: true,
-                fillColor: Colors.grey.shade50,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-              ),
-              items: items.map((item) {
-                return DropdownMenuItem(
-                  value: item,
-                  child: Text(
-                    item.name,
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                  ),
+              )
+            else if (_cities.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Text('لا توجد مدن متاحة'),
+              )
+            else
+              ..._cities.map((city) {
+                return RadioListTile<ManagementInformationModel>(
+                  title: Text(city.name),
+                  value: city,
+                  groupValue: _selectedCity,
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedCity = value;
+                    });
+                  },
+                  activeColor: const Color(0xff25935F),
+                  contentPadding: EdgeInsets.zero,
                 );
-              }).toList(),
-              onChanged: onChanged,
-              validator: validator,
-            ),
+              }),
+            if (_selectedCity == null && !_isLoadingCities && _cities.isNotEmpty)
+              FormField<ManagementInformationModel>(
+                validator: (value) {
+                  if (_selectedCity == null) return 'يرجى اختيار المدينة';
+                  return null;
+                },
+                builder: (state) {
+                  if (state.hasError) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8.0, right: 12.0),
+                      child: Text(
+                        state.errorText!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontSize: 12,
+                        ),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
           ],
         ),
       ),
@@ -567,18 +469,15 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Color(0xff25935F).withValues(alpha: 0.05),
+                    color: const Color(0xff25935F).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: Color(0xff25935F), size: 24),
+                  child: Icon(icon, color: const Color(0xff25935F), size: 24),
                 ),
                 const SizedBox(width: 12),
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
                 const Spacer(),
                 Container(
@@ -586,9 +485,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                   height: 12,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: controller.text.isNotEmpty
-                        ? Colors.green
-                        : Colors.red,
+                    color: controller.text.isNotEmpty ? Colors.green : Colors.red,
                   ),
                 ),
               ],
@@ -609,23 +506,120 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(
-                    color: Color(0xff25935F),
-                    width: 2,
-                  ),
+                  borderSide: const BorderSide(color: Color(0xff25935F), width: 2),
                 ),
                 filled: true,
                 fillColor: Colors.grey.shade50,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
               validator: validator,
-              onChanged: (value) {
-                setState(() {}); // Update red/green circle
-              },
+              onChanged: (value) => setState(() {}),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNumberFieldCard({
+    required String title,
+    required IconData icon,
+    required TextEditingController controller,
+    required String hintText,
+    required void Function(String) onChanged,
+    required int? selectedValue,
+    required String selectedLabel,
+    required String? Function(String?) validator,
+  }) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xff25935F).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: const Color(0xff25935F), size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 18),
+              decoration: InputDecoration(
+                hintText: hintText,
+                hintStyle: TextStyle(color: Colors.grey.shade400),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xff25935F), width: 2),
+                ),
+                filled: true,
+                fillColor: Colors.grey.shade50,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
+              validator: validator,
+              onChanged: onChanged,
+            ),
+            if (selectedValue != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xff25935F).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xff25935F).withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '$selectedLabel: ',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xff25935F),
+                      ),
+                    ),
+                    Text(
+                      '$selectedValue',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xff25935F),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),

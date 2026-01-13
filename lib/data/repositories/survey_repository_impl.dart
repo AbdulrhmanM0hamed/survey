@@ -20,10 +20,20 @@ class SurveyRepositoryImpl implements SurveyRepository {
   });
 
   Future<bool> _hasConnection() async {
-    final result = await connectivity.checkConnectivity();
-    return result.contains(ConnectivityResult.mobile) ||
-        result.contains(ConnectivityResult.wifi) ||
-        result.contains(ConnectivityResult.ethernet);
+    try {
+      final result = await connectivity.checkConnectivity();
+      print('📶 Connectivity check result: $result');
+      
+      // Check if any connectivity is available
+      final hasConnection = result.isNotEmpty && 
+          !result.contains(ConnectivityResult.none);
+      
+      print('📶 Has connection: $hasConnection');
+      return hasConnection;
+    } catch (e) {
+      print('⚠️ Connectivity check failed: $e, assuming connected');
+      return true; // Assume connected if check fails
+    }
   }
 
   @override
@@ -80,46 +90,39 @@ class SurveyRepositoryImpl implements SurveyRepository {
   }) async {
     try {
       final hasConnection = await _hasConnection();
+      print('🔍 getSurveyById($id): hasConnection=$hasConnection, forceRefresh=$forceRefresh');
 
-      if (!hasConnection && !forceRefresh) {
-        // Return cached data if no connection
+      // Always try to fetch from remote first
+      try {
+        print('🌐 Fetching survey $id from remote...');
+        final survey = await remoteDataSource.getSurveyById(id);
+        print('✅ Successfully fetched survey from remote');
+
+        // Cache the result
+        await localDataSource.cacheSurveyDetails(survey);
+
+        return Right(survey);
+      } catch (e) {
+        print('⚠️ Remote fetch failed: $e');
+        // If remote fails, try cache
         final cachedSurvey = await localDataSource.getCachedSurveyDetails(id);
         if (cachedSurvey != null) {
+          print('📦 Returning cached survey');
           return Right(cachedSurvey);
-        } else {
-          return const Left(
-            NetworkFailure(
-              message: 'لا يوجد اتصال بالإنترنت ولا توجد بيانات محفوظة',
-            ),
-          );
         }
+        // No cache available, return the error
+        if (e is ServerException) {
+          return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
+        } else if (e is NetworkException) {
+          return Left(NetworkFailure(message: e.message));
+        }
+        return Left(ServerFailure(message: 'فشل تحميل البيانات: ${e.toString()}'));
       }
-
-      // Fetch from remote
-      final survey = await remoteDataSource.getSurveyById(id);
-
-      // Cache the result
-      await localDataSource.cacheSurveyDetails(survey);
-
-      return Right(survey);
-    } on ServerException catch (e) {
-      // Try to return cached data on server error
-      final cachedSurvey = await localDataSource.getCachedSurveyDetails(id);
-      if (cachedSurvey != null) {
-        return Right(cachedSurvey);
-      }
-      return Left(ServerFailure(message: e.message, statusCode: e.statusCode));
-    } on NetworkException catch (e) {
-      // Try to return cached data on network error
-      final cachedSurvey = await localDataSource.getCachedSurveyDetails(id);
-      if (cachedSurvey != null) {
-        return Right(cachedSurvey);
-      }
-      return Left(NetworkFailure(message: e.message));
     } on CacheException catch (e) {
       return Left(CacheFailure(message: e.message));
     } catch (e) {
-      return Left(ServerFailure(message: 'حدث خطأ غير متوقع: ${e.toString()}'));
+      print('❌ Unknown error in getSurveyById: $e');
+      return Left(ServerFailure(message: 'فشل تحميل البيانات: ${e.toString()}'));
     }
   }
 

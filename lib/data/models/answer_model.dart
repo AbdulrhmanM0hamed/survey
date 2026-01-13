@@ -150,6 +150,18 @@ class SurveyAnswersModel extends Equatable {
   @HiveField(17)
   final double? longitude;
 
+  @HiveField(18)
+  final int? buildingFloorsCount;
+
+  @HiveField(19)
+  final int? apartmentsPerFloor;
+
+  @HiveField(20)
+  final int? selectedFloor;
+
+  @HiveField(21)
+  final int? selectedApartment;
+
   const SurveyAnswersModel({
     required this.surveyId,
     required this.surveyCode,
@@ -169,6 +181,10 @@ class SurveyAnswersModel extends Equatable {
     this.cityId,
     this.latitude,
     this.longitude,
+    this.buildingFloorsCount,
+    this.apartmentsPerFloor,
+    this.selectedFloor,
+    this.selectedApartment,
   });
 
   factory SurveyAnswersModel.fromJson(Map<String, dynamic> json) {
@@ -198,6 +214,10 @@ class SurveyAnswersModel extends Equatable {
       cityId: json['cityId'],
       latitude: json['latitude']?.toDouble(),
       longitude: json['longitude']?.toDouble(),
+      buildingFloorsCount: json['buildingFloorsCount'],
+      apartmentsPerFloor: json['apartmentsPerFloor'],
+      selectedFloor: json['selectedFloor'],
+      selectedApartment: json['selectedApartment'],
     );
   }
 
@@ -221,6 +241,10 @@ class SurveyAnswersModel extends Equatable {
       'cityId': cityId,
       'latitude': latitude,
       'longitude': longitude,
+      'buildingFloorsCount': buildingFloorsCount,
+      'apartmentsPerFloor': apartmentsPerFloor,
+      'selectedFloor': selectedFloor,
+      'selectedApartment': selectedApartment,
     };
   }
 
@@ -243,6 +267,10 @@ class SurveyAnswersModel extends Equatable {
     int? cityId,
     double? latitude,
     double? longitude,
+    int? buildingFloorsCount,
+    int? apartmentsPerFloor,
+    int? selectedFloor,
+    int? selectedApartment,
   }) {
     return SurveyAnswersModel(
       surveyId: surveyId ?? this.surveyId,
@@ -263,6 +291,10 @@ class SurveyAnswersModel extends Equatable {
       cityId: cityId ?? this.cityId,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      buildingFloorsCount: buildingFloorsCount ?? this.buildingFloorsCount,
+      apartmentsPerFloor: apartmentsPerFloor ?? this.apartmentsPerFloor,
+      selectedFloor: selectedFloor ?? this.selectedFloor,
+      selectedApartment: selectedApartment ?? this.selectedApartment,
     );
   }
 
@@ -286,5 +318,9 @@ class SurveyAnswersModel extends Equatable {
         cityId,
         latitude,
         longitude,
+        buildingFloorsCount,
+        apartmentsPerFloor,
+        selectedFloor,
+        selectedApartment,
       ];
 }

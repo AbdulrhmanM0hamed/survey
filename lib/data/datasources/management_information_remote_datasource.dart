@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+import 'package:survey/core/network/dio_client.dart';
 import 'package:survey/data/models/management_information_model.dart';
 
 abstract class ManagementInformationRemoteDataSource {
@@ -6,9 +6,9 @@ abstract class ManagementInformationRemoteDataSource {
 }
 
 class ManagementInformationRemoteDataSourceImpl implements ManagementInformationRemoteDataSource {
-  final Dio dio;
+  final DioClient dioClient;
 
-  ManagementInformationRemoteDataSourceImpl({required this.dio});
+  ManagementInformationRemoteDataSourceImpl({required this.dioClient});
 
   @override
   Future<ManagementInformationResponse> getManagementInformations(ManagementInformationType type) async {
@@ -26,7 +26,7 @@ class ManagementInformationRemoteDataSourceImpl implements ManagementInformation
           break;
       }
 
-      final response = await dio.get(
+      final response = await dioClient.get(
         '/ManagementInformations',
         queryParameters: {'type': typeParam},
       );
@@ -41,8 +41,8 @@ class ManagementInformationRemoteDataSourceImpl implements ManagementInformation
       } else {
         throw Exception('Failed to fetch management information');
       }
-    } on DioException catch (e) {
-      throw Exception('Network error: ${e.message}');
+    } catch (e) {
+      throw Exception('Network error: $e');
     }
   }
 }

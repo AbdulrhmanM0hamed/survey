@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:survey/core/constants/api_endpoints.dart';
 import 'package:survey/core/error/exceptions.dart';
+import 'package:survey/core/storage/hive_service.dart';
 
 class DioClient {
   late final Dio _dio;
@@ -22,7 +23,17 @@ class DioClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
+          // Add auth token if available
+          final token = HiveService.getToken();
+          print('🔑 Token available: ${token != null && token.isNotEmpty}');
+          if (token != null && token.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $token';
+            print('🔑 Token added to request');
+          } else {
+            print('⚠️ No token available!');
+          }
           print('🚀 REQUEST[${options.method}] => PATH: ${options.path}');
+          print('📋 Headers: ${options.headers}');
           return handler.next(options);
         },
         onResponse: (response, handler) {
@@ -35,6 +46,7 @@ class DioClient {
           print(
             '❌ ERROR[${error.response?.statusCode}] => PATH: ${error.requestOptions.path}',
           );
+          print('❌ Error data: ${error.response?.data}');
           return handler.next(error);
         },
       ),

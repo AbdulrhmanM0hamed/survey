@@ -4,6 +4,9 @@ class ApiEndpoints {
   // Base URL
   static const String baseUrl = 'http://45.94.209.137:8080/api';
 
+  // Auth Endpoints
+  static const String login = '/Researcher/login';
+
   // Surveys Endpoints
   static const String surveys = '/Surveys';
   

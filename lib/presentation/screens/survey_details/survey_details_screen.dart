@@ -47,6 +47,10 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           startTime: args['startTime'] as DateTime?,
           latitude: args['latitude'] as double?,
           longitude: args['longitude'] as double?,
+          buildingFloorsCount: args['buildingFloorsCount'] as int?,
+          apartmentsPerFloor: args['apartmentsPerFloor'] as int?,
+          selectedFloor: args['selectedFloor'] as int?,
+          selectedApartment: args['selectedApartment'] as int?,
         );
       }
 

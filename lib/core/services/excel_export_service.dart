@@ -535,6 +535,10 @@ class ExcelExportService {
     structure.add({'type': 'basic', 'text': 'اسم المدينة'});
     structure.add({'type': 'basic', 'text': 'اسم الحى / القرية'});
     structure.add({'type': 'basic', 'text': 'اسم الشارع'});
+    structure.add({'type': 'basic', 'text': 'عدد الأدوار'});
+    structure.add({'type': 'basic', 'text': 'عدد الشقق في الدور'});
+    structure.add({'type': 'basic', 'text': 'الدور المختار'});
+    structure.add({'type': 'basic', 'text': 'الشقة المختارة'});
     structure.add({'type': 'basic', 'text': 'قبول المشاركة'});
     structure.add({'type': 'basic', 'text': 'سبب عدم القبول'});
     structure.add({'type': 'basic', 'text': 'تاريخ البدء'});
@@ -687,6 +691,18 @@ class ExcelExportService {
             break;
           case 'اسم الشارع':
             cellValue = surveyAnswers.streetName ?? '';
+            break;
+          case 'عدد الأدوار':
+            cellValue = surveyAnswers.buildingFloorsCount?.toString() ?? '';
+            break;
+          case 'عدد الشقق في الدور':
+            cellValue = surveyAnswers.apartmentsPerFloor?.toString() ?? '';
+            break;
+          case 'الدور المختار':
+            cellValue = surveyAnswers.selectedFloor?.toString() ?? '';
+            break;
+          case 'الشقة المختارة':
+            cellValue = surveyAnswers.selectedApartment?.toString() ?? '';
             break;
           case 'قبول المشاركة':
             cellValue = surveyAnswers.isApproved == null 

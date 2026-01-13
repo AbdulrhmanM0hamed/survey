@@ -14,6 +14,11 @@ class ConsentScreen extends StatefulWidget {
   final String? neighborhoodName;
   final String? streetName;
   final DateTime? startTime;
+  // Building info
+  final int? buildingFloorsCount;
+  final int? apartmentsPerFloor;
+  final int? selectedFloor;
+  final int? selectedApartment;
 
   const ConsentScreen({
     super.key,
@@ -28,6 +33,10 @@ class ConsentScreen extends StatefulWidget {
     this.neighborhoodName,
     this.streetName,
     this.startTime,
+    this.buildingFloorsCount,
+    this.apartmentsPerFloor,
+    this.selectedFloor,
+    this.selectedApartment,
   });
 
   @override
@@ -243,6 +252,10 @@ class _ConsentScreenState extends State<ConsentScreen> {
             'startTime': widget.startTime,
             'latitude': _latitude,
             'longitude': _longitude,
+            'buildingFloorsCount': widget.buildingFloorsCount,
+            'apartmentsPerFloor': widget.apartmentsPerFloor,
+            'selectedFloor': widget.selectedFloor,
+            'selectedApartment': widget.selectedApartment,
           },
         ),
       ),

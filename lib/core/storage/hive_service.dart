@@ -7,6 +7,14 @@ class HiveService {
   static const String surveyDetailsBox = 'survey_details_box';
   static const String answersBox = 'answers_box';
   static const String draftAnswersBox = 'draft_answers_box';
+  static const String authBox = 'auth_box';
+
+  // Auth keys
+  static const String tokenKey = 'auth_token';
+  static const String userIdKey = 'user_id';
+  static const String userNameKey = 'user_name';
+  static const String userTypeKey = 'user_type';
+  static const String isLoggedInKey = 'is_logged_in';
 
   // Initialize Hive
   static Future<void> init() async {
@@ -20,6 +28,95 @@ class HiveService {
     await Hive.openBox(surveyDetailsBox);
     await Hive.openBox(answersBox);
     await Hive.openBox(draftAnswersBox);
+    await Hive.openBox(authBox);
+  }
+
+  // ============ Auth Methods ============
+  
+  static Future<void> saveAuthData({
+    required String token,
+    required String userId,
+    required String fullName,
+    required int userType,
+  }) async {
+    print('💾 Saving auth data...');
+    print('   Token length: ${token.length}');
+    print('   UserId: $userId');
+    print('   FullName: $fullName');
+    
+    final box = _getBox(authBox);
+    await box.put(tokenKey, token);
+    await box.put(userIdKey, userId);
+    await box.put(userNameKey, fullName);
+    await box.put(userTypeKey, userType);
+    await box.put(isLoggedInKey, true);
+    
+    print('✅ Auth data saved successfully');
+    
+    // Verify save
+    final savedToken = box.get(tokenKey);
+    print('🔍 Verification - Token saved: ${savedToken != null}');
+  }
+
+  static String? getToken() {
+    try {
+      if (!Hive.isBoxOpen(authBox)) {
+        print('⚠️ Auth box is not open!');
+        return null;
+      }
+      final box = Hive.box(authBox);
+      final token = box.get(tokenKey) as String?;
+      print('🔑 getToken: ${token != null ? "Token exists (${token.length} chars)" : "No token"}');
+      return token;
+    } catch (e) {
+      print('❌ Error getting token: $e');
+      return null;
+    }
+  }
+
+  static String? getUserId() {
+    try {
+      final box = _getBox(authBox);
+      return box.get(userIdKey) as String?;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static String? getUserName() {
+    try {
+      final box = _getBox(authBox);
+      return box.get(userNameKey) as String?;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static int? getUserType() {
+    try {
+      final box = _getBox(authBox);
+      return box.get(userTypeKey) as int?;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static bool isLoggedIn() {
+    try {
+      final box = _getBox(authBox);
+      return box.get(isLoggedInKey, defaultValue: false) as bool;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<void> clearAuthData() async {
+    try {
+      final box = _getBox(authBox);
+      await box.clear();
+    } catch (e) {
+      throw CacheException(message: 'Failed to clear auth data: ${e.toString()}');
+    }
   }
 
   // Get box instance
