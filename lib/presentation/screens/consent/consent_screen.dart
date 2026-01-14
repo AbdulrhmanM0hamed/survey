@@ -19,6 +19,10 @@ class ConsentScreen extends StatefulWidget {
   final int? apartmentsPerFloor;
   final int? selectedFloor;
   final int? selectedApartment;
+  final int? governorateId;
+  final int? areaId;
+  final String? governorateName;
+  final String? areaName;
 
   const ConsentScreen({
     super.key,
@@ -37,6 +41,10 @@ class ConsentScreen extends StatefulWidget {
     this.apartmentsPerFloor,
     this.selectedFloor,
     this.selectedApartment,
+    this.governorateId,
+    this.areaId,
+    this.governorateName,
+    this.areaName,
   });
 
   @override
@@ -59,7 +67,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
 
   Future<void> _pickLocation() async {
     if (!mounted) return;
-    
+
     setState(() {
       _isLoadingLocation = true;
     });
@@ -74,7 +82,9 @@ class _ConsentScreenState extends State<ConsentScreen> {
           });
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('خدمات الموقع غير مفعلة. يرجى تفعيلها من الإعدادات.'),
+              content: Text(
+                'خدمات الموقع غير مفعلة. يرجى تفعيلها من الإعدادات.',
+              ),
               backgroundColor: Colors.red,
             ),
           );
@@ -109,7 +119,9 @@ class _ConsentScreenState extends State<ConsentScreen> {
           });
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('إذن الموقع مرفوض بشكل دائم. يرجى تفعيله من إعدادات التطبيق.'),
+              content: Text(
+                'إذن الموقع مرفوض بشكل دائم. يرجى تفعيله من إعدادات التطبيق.',
+              ),
               backgroundColor: Colors.red,
               duration: Duration(seconds: 4),
             ),
@@ -120,9 +132,9 @@ class _ConsentScreenState extends State<ConsentScreen> {
 
       // Try to get last known position first (faster)
       Position? lastPosition = await Geolocator.getLastKnownPosition();
-      
+
       Position finalPosition;
-      
+
       // If no last known position, get current position
       if (lastPosition != null) {
         finalPosition = lastPosition;
@@ -131,32 +143,34 @@ class _ConsentScreenState extends State<ConsentScreen> {
         ////print('📍 Getting current position...');
         try {
           // Try medium accuracy first
-          finalPosition = await Geolocator.getCurrentPosition(
-            locationSettings: const LocationSettings(
-              accuracy: LocationAccuracy.medium,
-              timeLimit: Duration(seconds: 15),
-            ),
-          ).timeout(
-            const Duration(seconds: 20),
-            onTimeout: () {
-              throw Exception('timeout_medium');
-            },
-          );
+          finalPosition =
+              await Geolocator.getCurrentPosition(
+                locationSettings: const LocationSettings(
+                  accuracy: LocationAccuracy.medium,
+                  timeLimit: Duration(seconds: 15),
+                ),
+              ).timeout(
+                const Duration(seconds: 20),
+                onTimeout: () {
+                  throw Exception('timeout_medium');
+                },
+              );
         } catch (e) {
           if (e.toString().contains('timeout_medium')) {
             ////print('⚠️ Medium accuracy timeout, trying low accuracy...');
             // Fallback to low accuracy (faster)
-            finalPosition = await Geolocator.getCurrentPosition(
-              locationSettings: const LocationSettings(
-                accuracy: LocationAccuracy.low,
-                timeLimit: Duration(seconds: 10),
-              ),
-            ).timeout(
-              const Duration(seconds: 15),
-              onTimeout: () {
-                throw Exception('timeout');
-              },
-            );
+            finalPosition =
+                await Geolocator.getCurrentPosition(
+                  locationSettings: const LocationSettings(
+                    accuracy: LocationAccuracy.low,
+                    timeLimit: Duration(seconds: 10),
+                  ),
+                ).timeout(
+                  const Duration(seconds: 15),
+                  onTimeout: () {
+                    throw Exception('timeout');
+                  },
+                );
           } else {
             rethrow;
           }
@@ -183,14 +197,17 @@ class _ConsentScreenState extends State<ConsentScreen> {
         setState(() {
           _isLoadingLocation = false;
         });
-        
+
         String errorMessage;
-        if (e.toString().contains('timeout') || e.toString().contains('TimeoutException')) {
-          errorMessage = 'لم نتمكن من تحديد الموقع.\n\nيمكنك:\n• المحاولة مرة أخرى\n• أو المتابعة بدون تحديد الموقع';
+        if (e.toString().contains('timeout') ||
+            e.toString().contains('TimeoutException')) {
+          errorMessage =
+              'لم نتمكن من تحديد الموقع.\n\nيمكنك:\n• المحاولة مرة أخرى\n• أو المتابعة بدون تحديد الموقع';
         } else {
-          errorMessage = 'حدث خطأ أثناء تحديد الموقع.\nيمكنك المتابعة بدون تحديد الموقع.';
+          errorMessage =
+              'حدث خطأ أثناء تحديد الموقع.\nيمكنك المتابعة بدون تحديد الموقع.';
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
@@ -234,9 +251,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => SurveyDetailsScreen(
-          surveyId: widget.surveyId,
-        ),
+        builder: (context) => SurveyDetailsScreen(surveyId: widget.surveyId),
         settings: RouteSettings(
           arguments: {
             'researcherName': widget.researcherName,
@@ -248,7 +263,9 @@ class _ConsentScreenState extends State<ConsentScreen> {
             'neighborhoodName': widget.neighborhoodName,
             'streetName': widget.streetName,
             'isApproved': _isApproved,
-            'rejectReason': _isApproved == false ? _rejectReasonController.text.trim() : '',
+            'rejectReason': _isApproved == false
+                ? _rejectReasonController.text.trim()
+                : '',
             'startTime': widget.startTime,
             'latitude': _latitude,
             'longitude': _longitude,
@@ -256,6 +273,10 @@ class _ConsentScreenState extends State<ConsentScreen> {
             'apartmentsPerFloor': widget.apartmentsPerFloor,
             'selectedFloor': widget.selectedFloor,
             'selectedApartment': widget.selectedApartment,
+            'governorateId': widget.governorateId,
+            'areaId': widget.areaId,
+            'governorateName': widget.governorateName,
+            'areaName': widget.areaName,
           },
         ),
       ),
@@ -310,13 +331,15 @@ class _ConsentScreenState extends State<ConsentScreen> {
                       style: TextStyle(
                         fontSize: 18,
                         height: 1.8,
-                        color: Color(0xFF2D5A52), // Darker green/blue text like image
+                        color: Color(
+                          0xFF2D5A52,
+                        ), // Darker green/blue text like image
                       ),
                       textAlign: TextAlign.justify,
                     ),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     const Text(
                       'شاكرين ومقدرين تعاونكم معنا.',
                       style: TextStyle(
@@ -350,7 +373,9 @@ class _ConsentScreenState extends State<ConsentScreen> {
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xff25935F).withOpacity(0.1),
+                                  color: const Color(
+                                    0xff25935F,
+                                  ).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Icon(
@@ -402,14 +427,20 @@ class _ConsentScreenState extends State<ConsentScreen> {
                               decoration: BoxDecoration(
                                 color: Colors.green.shade50,
                                 borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.green.shade200),
+                                border: Border.all(
+                                  color: Colors.green.shade200,
+                                ),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
                                     children: [
-                                      const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                                      const Icon(
+                                        Icons.check_circle,
+                                        color: Colors.green,
+                                        size: 20,
+                                      ),
                                       const SizedBox(width: 8),
                                       const Text(
                                         'تم تحديد الموقع',
@@ -423,11 +454,17 @@ class _ConsentScreenState extends State<ConsentScreen> {
                                   const SizedBox(height: 8),
                                   Text(
                                     'خط العرض: ${_latitude!.toStringAsFixed(6)}',
-                                    style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade700,
+                                    ),
                                   ),
                                   Text(
                                     'خط الطول: ${_longitude!.toStringAsFixed(6)}',
-                                    style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade700,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -435,22 +472,32 @@ class _ConsentScreenState extends State<ConsentScreen> {
                             const SizedBox(height: 12),
                           ],
                           ElevatedButton.icon(
-                            onPressed: _isLoadingLocation ? null : _pickLocation,
+                            onPressed: _isLoadingLocation
+                                ? null
+                                : _pickLocation,
                             icon: _isLoadingLocation
                                 ? const SizedBox(
                                     width: 20,
                                     height: 20,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
                                     ),
                                   )
-                                : Icon(_latitude != null ? Icons.refresh : Icons.my_location),
-                            label: Text(_isLoadingLocation
-                                ? 'جاري تحديد الموقع...'
-                                : _latitude != null
-                                    ? 'إعادة تحديد الموقع'
-                                    : 'تحديد الموقع الحالي'),
+                                : Icon(
+                                    _latitude != null
+                                        ? Icons.refresh
+                                        : Icons.my_location,
+                                  ),
+                            label: Text(
+                              _isLoadingLocation
+                                  ? 'جاري تحديد الموقع...'
+                                  : _latitude != null
+                                  ? 'إعادة تحديد الموقع'
+                                  : 'تحديد الموقع الحالي',
+                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xff25935F),
                               foregroundColor: Colors.white,
@@ -464,7 +511,11 @@ class _ConsentScreenState extends State<ConsentScreen> {
                             const SizedBox(height: 8),
                             Row(
                               children: [
-                                Icon(Icons.info_outline, size: 16, color: Colors.grey.shade600),
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 16,
+                                  color: Colors.grey.shade600,
+                                ),
                                 const SizedBox(width: 4),
                                 Expanded(
                                   child: Text(
@@ -517,9 +568,11 @@ class _ConsentScreenState extends State<ConsentScreen> {
                                 height: 24,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: _isApproved == null 
-                                      ? Colors.grey 
-                                      : (_isApproved! ? const Color(0xff4CAF50) : Colors.red),
+                                  color: _isApproved == null
+                                      ? Colors.grey
+                                      : (_isApproved!
+                                            ? const Color(0xff4CAF50)
+                                            : Colors.red),
                                 ),
                               ),
                             ],
@@ -533,7 +586,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          
+
                           // Radio Buttons Row
                           Row(
                             children: [
@@ -590,10 +643,14 @@ class _ConsentScreenState extends State<ConsentScreen> {
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
                               ),
                               validator: (value) {
-                                if (_isApproved == false && (value == null || value.trim().isEmpty)) {
+                                if (_isApproved == false &&
+                                    (value == null || value.trim().isEmpty)) {
                                   return 'يرجى ذكر سبب عدم الموافقة';
                                 }
                                 return null;
@@ -607,14 +664,14 @@ class _ConsentScreenState extends State<ConsentScreen> {
                 ),
               ),
             ),
-            
+
             // Bottom Button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _isApproved != null 
-                      ? const Color(0xff25935F) 
+                  backgroundColor: _isApproved != null
+                      ? const Color(0xff25935F)
                       : Colors.grey.shade400,
                   minimumSize: const Size(double.infinity, 56),
                   shape: RoundedRectangleBorder(

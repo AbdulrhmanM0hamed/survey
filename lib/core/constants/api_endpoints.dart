@@ -9,9 +9,13 @@ class ApiEndpoints {
 
   // Surveys Endpoints
   static const String surveys = '/Surveys';
-  
+
   static String getSurveyById(int id) => '/Surveys/$id/exportData';
-  
+
+  // Lookups Endpoints
+  static const String governorates = '/Lookups/governorates';
+  static const String areas = '/Lookups/areas';
+
   // Timeout durations
   static const Duration connectTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);

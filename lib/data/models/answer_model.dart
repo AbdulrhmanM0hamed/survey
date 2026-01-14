@@ -84,14 +84,14 @@ class AnswerModel extends Equatable {
 
   @override
   List<Object?> get props => [
-        questionId,
-        questionCode,
-        value,
-        timestamp,
-        groupInstanceId,
-        questionType,
-        groupId,
-      ];
+    questionId,
+    questionCode,
+    value,
+    timestamp,
+    groupInstanceId,
+    questionType,
+    groupId,
+  ];
 }
 
 @HiveType(typeId: 8)
@@ -162,6 +162,18 @@ class SurveyAnswersModel extends Equatable {
   @HiveField(21)
   final int? selectedApartment;
 
+  @HiveField(22)
+  final int? governorateId;
+
+  @HiveField(23)
+  final int? areaId;
+
+  @HiveField(24)
+  final String? governorateName;
+
+  @HiveField(25)
+  final String? areaName;
+
   const SurveyAnswersModel({
     required this.surveyId,
     required this.surveyCode,
@@ -185,13 +197,18 @@ class SurveyAnswersModel extends Equatable {
     this.apartmentsPerFloor,
     this.selectedFloor,
     this.selectedApartment,
+    this.governorateId,
+    this.areaId,
+    this.governorateName,
+    this.areaName,
   });
 
   factory SurveyAnswersModel.fromJson(Map<String, dynamic> json) {
     return SurveyAnswersModel(
       surveyId: json['surveyId'] ?? 0,
       surveyCode: json['surveyCode'] ?? '',
-      answers: (json['answers'] as List<dynamic>?)
+      answers:
+          (json['answers'] as List<dynamic>?)
               ?.map((e) => AnswerModel.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
@@ -218,6 +235,10 @@ class SurveyAnswersModel extends Equatable {
       apartmentsPerFloor: json['apartmentsPerFloor'],
       selectedFloor: json['selectedFloor'],
       selectedApartment: json['selectedApartment'],
+      governorateId: json['governorateId'],
+      areaId: json['areaId'],
+      governorateName: json['governorateName'],
+      areaName: json['areaName'],
     );
   }
 
@@ -245,6 +266,10 @@ class SurveyAnswersModel extends Equatable {
       'apartmentsPerFloor': apartmentsPerFloor,
       'selectedFloor': selectedFloor,
       'selectedApartment': selectedApartment,
+      'governorateId': governorateId,
+      'areaId': areaId,
+      'governorateName': governorateName,
+      'areaName': areaName,
     };
   }
 
@@ -271,6 +296,10 @@ class SurveyAnswersModel extends Equatable {
     int? apartmentsPerFloor,
     int? selectedFloor,
     int? selectedApartment,
+    int? governorateId,
+    int? areaId,
+    String? governorateName,
+    String? areaName,
   }) {
     return SurveyAnswersModel(
       surveyId: surveyId ?? this.surveyId,
@@ -295,32 +324,40 @@ class SurveyAnswersModel extends Equatable {
       apartmentsPerFloor: apartmentsPerFloor ?? this.apartmentsPerFloor,
       selectedFloor: selectedFloor ?? this.selectedFloor,
       selectedApartment: selectedApartment ?? this.selectedApartment,
+      governorateId: governorateId ?? this.governorateId,
+      areaId: areaId ?? this.areaId,
+      governorateName: governorateName ?? this.governorateName,
+      areaName: areaName ?? this.areaName,
     );
   }
 
   @override
   List<Object?> get props => [
-        surveyId,
-        surveyCode,
-        answers,
-        startedAt,
-        completedAt,
-        isDraft,
-        researcherName,
-        supervisorName,
-        cityName,
-        neighborhoodName,
-        streetName,
-        isApproved,
-        rejectReason,
-        researcherId,
-        supervisorId,
-        cityId,
-        latitude,
-        longitude,
-        buildingFloorsCount,
-        apartmentsPerFloor,
-        selectedFloor,
-        selectedApartment,
-      ];
+    surveyId,
+    surveyCode,
+    answers,
+    startedAt,
+    completedAt,
+    isDraft,
+    researcherName,
+    supervisorName,
+    cityName,
+    neighborhoodName,
+    streetName,
+    isApproved,
+    rejectReason,
+    researcherId,
+    supervisorId,
+    cityId,
+    latitude,
+    longitude,
+    buildingFloorsCount,
+    apartmentsPerFloor,
+    selectedFloor,
+    selectedApartment,
+    governorateId,
+    areaId,
+    governorateName,
+    areaName,
+  ];
 }

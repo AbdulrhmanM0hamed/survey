@@ -1,5 +1,7 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:survey/core/error/exceptions.dart';
+import 'package:flutter/material.dart';
+import 'package:survey/presentation/screens/login/login_screen.dart';
 
 class HiveService {
   // Box names
@@ -19,10 +21,10 @@ class HiveService {
   // Initialize Hive
   static Future<void> init() async {
     await Hive.initFlutter();
-    
+
     // Register adapters here when created
     // Hive.registerAdapter(SurveyModelAdapter());
-    
+
     // Open boxes
     await Hive.openBox(surveysBox);
     await Hive.openBox(surveyDetailsBox);
@@ -32,7 +34,7 @@ class HiveService {
   }
 
   // ============ Auth Methods ============
-  
+
   static Future<void> saveAuthData({
     required String token,
     required String userId,
@@ -43,16 +45,16 @@ class HiveService {
     print('   Token length: ${token.length}');
     print('   UserId: $userId');
     print('   FullName: $fullName');
-    
+
     final box = _getBox(authBox);
     await box.put(tokenKey, token);
     await box.put(userIdKey, userId);
     await box.put(userNameKey, fullName);
     await box.put(userTypeKey, userType);
     await box.put(isLoggedInKey, true);
-    
+
     print('✅ Auth data saved successfully');
-    
+
     // Verify save
     final savedToken = box.get(tokenKey);
     print('🔍 Verification - Token saved: ${savedToken != null}');
@@ -66,7 +68,9 @@ class HiveService {
       }
       final box = Hive.box(authBox);
       final token = box.get(tokenKey) as String?;
-      print('🔑 getToken: ${token != null ? "Token exists (${token.length} chars)" : "No token"}');
+      print(
+        '🔑 getToken: ${token != null ? "Token exists (${token.length} chars)" : "No token"}',
+      );
       return token;
     } catch (e) {
       print('❌ Error getting token: $e');
@@ -115,7 +119,40 @@ class HiveService {
       final box = _getBox(authBox);
       await box.clear();
     } catch (e) {
-      throw CacheException(message: 'Failed to clear auth data: ${e.toString()}');
+      throw CacheException(
+        message: 'Failed to clear auth data: ${e.toString()}',
+      );
+    }
+  }
+
+  /// Logout: Clears auth data and navigates to LoginScreen
+  static Future<void> logout(BuildContext context) async {
+    try {
+      // 1. Clear Data
+      await clearAuthData();
+
+      // 2. Clear other boxes if needed (optional based on requirements)
+      // await clearBox(surveysBox);
+      // await clearBox(answersBox);
+
+      // 3. Navigate to Login
+      if (context.mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false, // Remove all previous routes
+        );
+      }
+    } catch (e) {
+      print('Error during logout: $e');
+      // Even if clearing fails, we should probably still try to navigate out
+      if (context.mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
+        );
+      }
     }
   }
 
@@ -142,10 +179,7 @@ class HiveService {
   }
 
   // Get data
-  static T? getData<T>({
-    required String boxName,
-    required String key,
-  }) {
+  static T? getData<T>({required String boxName, required String key}) {
     try {
       final box = _getBox(boxName);
       return box.get(key) as T?;
@@ -222,10 +256,7 @@ class HiveService {
   }
 
   // Get list
-  static List<T> getList<T>({
-    required String boxName,
-    required String key,
-  }) {
+  static List<T> getList<T>({required String boxName, required String key}) {
     try {
       final box = _getBox(boxName);
       final data = box.get(key);

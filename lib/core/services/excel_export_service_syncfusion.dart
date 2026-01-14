@@ -258,6 +258,8 @@ class ExcelExportServiceSyncfusion {
       {'type': 'basic', 'text': 'اسم الاستبيان'},
       {'type': 'basic', 'text': 'اسم الباحث'},
       {'type': 'basic', 'text': 'اسم المشرف'},
+      {'type': 'basic', 'text': 'اسم المحافظة'},
+      {'type': 'basic', 'text': 'اسم المنطقة'},
       {'type': 'basic', 'text': 'اسم المدينة'},
       {'type': 'basic', 'text': 'اسم الحى / القرية'},
       {'type': 'basic', 'text': 'اسم الشارع'},

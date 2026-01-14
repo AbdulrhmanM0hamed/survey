@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:survey/data/models/management_information_model.dart';
+import 'package:survey/data/models/lookup_model.dart';
 import 'package:survey/data/datasources/management_information_remote_datasource.dart';
 import 'package:survey/data/datasources/local/management_information_local_datasource.dart';
 import 'package:survey/presentation/screens/consent/consent_screen.dart';
@@ -27,6 +28,18 @@ class PreSurveyInfoScreen extends StatefulWidget {
 class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
   final _formKey = GlobalKey<FormState>();
   final _random = Random();
+
+  // Governorates selection
+  LookupModel? _selectedGovernorate;
+  List<LookupModel> _governorates = [];
+  bool _isLoadingGovernorates = true;
+  String? _governoratesError;
+
+  // Areas selection
+  LookupModel? _selectedArea;
+  List<LookupModel> _areas = [];
+  bool _isLoadingAreas = false;
+  String? _areasError;
 
   // City selection
   ManagementInformationModel? _selectedCity;
@@ -54,6 +67,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
       dioClient: Injection.dioClient,
     );
     _localDataSource = ManagementInformationLocalDataSourceImpl();
+    _loadGovernorates();
     _loadCities();
   }
 
@@ -66,6 +80,81 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
     super.dispose();
   }
 
+  Future<bool> _hasConnection() async {
+    final connectivityResult = await Connectivity().checkConnectivity();
+    return connectivityResult.contains(ConnectivityResult.mobile) ||
+        connectivityResult.contains(ConnectivityResult.wifi) ||
+        connectivityResult.contains(ConnectivityResult.ethernet);
+  }
+
+  Future<void> _loadGovernorates() async {
+    setState(() {
+      _isLoadingGovernorates = true;
+      _governoratesError = null;
+    });
+
+    try {
+      final hasConnection = await _hasConnection();
+      LookupResponse? response;
+
+      if (hasConnection) {
+        try {
+          response = await _remoteDataSource.getGovernorates();
+          await _localDataSource.cacheGovernorates(response);
+        } catch (e) {
+          response = await _localDataSource.getCachedGovernorates();
+        }
+      } else {
+        response = await _localDataSource.getCachedGovernorates();
+      }
+
+      setState(() {
+        _governorates = response?.items ?? [];
+        _isLoadingGovernorates = false;
+      });
+    } catch (e) {
+      setState(() {
+        _governoratesError = 'فشل تحميل المحافظات';
+        _isLoadingGovernorates = false;
+      });
+    }
+  }
+
+  Future<void> _loadAreas(int governorateId) async {
+    setState(() {
+      _isLoadingAreas = true;
+      _areasError = null;
+      _areas = [];
+      _selectedArea = null;
+    });
+
+    try {
+      final hasConnection = await _hasConnection();
+      LookupResponse? response;
+
+      if (hasConnection) {
+        try {
+          response = await _remoteDataSource.getAreas(governorateId);
+          await _localDataSource.cacheAreas(governorateId, response);
+        } catch (e) {
+          response = await _localDataSource.getCachedAreas(governorateId);
+        }
+      } else {
+        response = await _localDataSource.getCachedAreas(governorateId);
+      }
+
+      setState(() {
+        _areas = response?.items ?? [];
+        _isLoadingAreas = false;
+      });
+    } catch (e) {
+      setState(() {
+        _areasError = 'فشل تحميل المناطق';
+        _isLoadingAreas = false;
+      });
+    }
+  }
+
   Future<void> _loadCities() async {
     setState(() {
       _isLoadingCities = true;
@@ -73,12 +162,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
     });
 
     try {
-      final connectivityResult = await Connectivity().checkConnectivity();
-      final hasConnection =
-          connectivityResult.contains(ConnectivityResult.mobile) ||
-          connectivityResult.contains(ConnectivityResult.wifi) ||
-          connectivityResult.contains(ConnectivityResult.ethernet);
-
+      final hasConnection = await _hasConnection();
       ManagementInformationResponse? citiesResponse;
 
       if (hasConnection) {
@@ -142,6 +226,10 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
             surveyCode: widget.surveyCode,
             cityName: _selectedCity?.name,
             cityId: _selectedCity?.id,
+            governorateId: _selectedGovernorate!.id,
+            areaId: _selectedArea!.id,
+            governorateName: _selectedGovernorate!.name,
+            areaName: _selectedArea!.name,
             neighborhoodName: _neighborhoodController.text.trim(),
             streetName: _streetController.text.trim(),
             startTime: widget.startTime,
@@ -195,9 +283,72 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
               ),
               const SizedBox(height: 24),
 
-              // City Selection (Radio Buttons)
-              _buildCitySelectionCard(),
+              // Governorate Selection
+              _buildSelectionCard<LookupModel>(
+                title: 'المحافظة',
+                icon: Icons.map,
+                items: _governorates,
+                selectedItem: _selectedGovernorate,
+                isLoading: _isLoadingGovernorates,
+                error: _governoratesError,
+                onRetry: _loadGovernorates,
+                onChanged: (value) {
+                  setState(() {
+                    _selectedGovernorate = value;
+                    _selectedArea = null;
+                    _areas = [];
+                  });
+                  if (value != null) {
+                    _loadAreas(value.id);
+                  }
+                },
+                itemLabel: (item) => item.name,
+                emptyMessage: 'لا توجد محافظات متاحة',
+                validationMessage: 'يرجى اختيار المحافظة',
+              ),
               const SizedBox(height: 16),
+
+              // Area Selection (Dependent on Governorate)
+              if (_selectedGovernorate != null) ...[
+                _buildSelectionCard<LookupModel>(
+                  title: 'المنطقة',
+                  icon: Icons.location_on_outlined,
+                  items: _areas,
+                  selectedItem: _selectedArea,
+                  isLoading: _isLoadingAreas,
+                  error: _areasError,
+                  onRetry: () => _loadAreas(_selectedGovernorate!.id),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedArea = value;
+                    });
+                  },
+                  itemLabel: (item) => item.name,
+                  emptyMessage: 'لا توجد مناطق متاحة',
+                  validationMessage: 'يرجى اختيار المنطقة',
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // City Selection
+              // _buildSelectionCard<ManagementInformationModel>(
+              //   title: 'اسم المدينة',
+              //   icon: Icons.location_city,
+              //   items: _cities,
+              //   selectedItem: _selectedCity,
+              //   isLoading: _isLoadingCities,
+              //   error: _citiesError,
+              //   onRetry: _loadCities,
+              //   onChanged: (value) {
+              //     setState(() {
+              //       _selectedCity = value;
+              //     });
+              //   },
+              //   itemLabel: (item) => item.name,
+              //   emptyMessage: 'لا توجد مدن متاحة',
+              //   validationMessage: 'يرجى اختيار المدينة',
+              // ),
+              // const SizedBox(height: 16),
 
               // Neighborhood Name
               _buildTextFieldCard(
@@ -347,7 +498,19 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
     );
   }
 
-  Widget _buildCitySelectionCard() {
+  Widget _buildSelectionCard<T>({
+    required String title,
+    required IconData icon,
+    required List<T> items,
+    required T? selectedItem,
+    required bool isLoading,
+    required String? error,
+    required VoidCallback onRetry,
+    required ValueChanged<T?> onChanged,
+    required String Function(T) itemLabel,
+    required String emptyMessage,
+    required String validationMessage,
+  }) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -364,16 +527,15 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                     color: const Color(0xff25935F).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(
-                    Icons.location_city,
-                    color: Color(0xff25935F),
-                    size: 24,
-                  ),
+                  child: Icon(icon, color: const Color(0xff25935F), size: 24),
                 ),
                 const SizedBox(width: 12),
-                const Text(
-                  'اسم المدينة',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const Spacer(),
                 Container(
@@ -381,60 +543,51 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                   height: 12,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: _selectedCity != null ? Colors.green : Colors.red,
+                    color: selectedItem != null ? Colors.green : Colors.red,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            if (_isLoadingCities)
+            if (isLoading)
               const Center(
                 child: Padding(
                   padding: EdgeInsets.all(16.0),
                   child: CircularProgressIndicator(),
                 ),
               )
-            else if (_citiesError != null)
+            else if (error != null)
               Center(
                 child: Column(
                   children: [
-                    Text(
-                      _citiesError!,
-                      style: const TextStyle(color: Colors.red),
-                    ),
+                    Text(error, style: const TextStyle(color: Colors.red)),
                     TextButton(
-                      onPressed: _loadCities,
+                      onPressed: onRetry,
                       child: const Text('إعادة المحاولة'),
                     ),
                   ],
                 ),
               )
-            else if (_cities.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Text('لا توجد مدن متاحة'),
+            else if (items.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(emptyMessage),
               )
             else
-              ..._cities.map((city) {
-                return RadioListTile<ManagementInformationModel>(
-                  title: Text(city.name),
-                  value: city,
-                  groupValue: _selectedCity,
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedCity = value;
-                    });
-                  },
+              ...items.map((item) {
+                return RadioListTile<T>(
+                  title: Text(itemLabel(item)),
+                  value: item,
+                  groupValue: selectedItem,
+                  onChanged: onChanged,
                   activeColor: const Color(0xff25935F),
                   contentPadding: EdgeInsets.zero,
                 );
               }),
-            if (_selectedCity == null &&
-                !_isLoadingCities &&
-                _cities.isNotEmpty)
-              FormField<ManagementInformationModel>(
+            if (selectedItem == null && !isLoading && items.isNotEmpty)
+              FormField<T>(
                 validator: (value) {
-                  if (_selectedCity == null) return 'يرجى اختيار المدينة';
+                  if (selectedItem == null) return validationMessage;
                   return null;
                 },
                 builder: (state) {

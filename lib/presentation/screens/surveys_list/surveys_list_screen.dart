@@ -6,6 +6,7 @@ import 'package:survey/presentation/screens/survey_details/viewmodel/survey_deta
 import 'package:survey/presentation/screens/tasks/tasks_screen.dart';
 import 'package:survey/core/di/injection.dart';
 import 'package:survey/data/models/survey_model.dart';
+import 'package:survey/core/storage/hive_service.dart';
 
 class SurveysListScreen extends StatefulWidget {
   const SurveysListScreen({super.key});
@@ -39,6 +40,12 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
           ),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: () => HiveService.logout(context),
+            icon: const Icon(Icons.logout, color: Colors.white),
+          ),
+        ],
       ),
       body: Consumer<SurveysListViewModel>(
         builder: (context, viewModel, child) {

@@ -37,7 +37,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
   final Map<int, bool> _groupVisibility = {};
   final Map<int, bool> _sectionVisibility = {};
   final Map<int, bool> _questionRequired = {};
-  
+
   // Instance-specific visibility for questions inside repeated groups
   // Key format: "${questionId}_${instanceId}"
   final Map<String, bool> _instanceQuestionVisibility = {};
@@ -62,6 +62,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
   int? _apartmentsPerFloor;
   int? _selectedFloor;
   int? _selectedApartment;
+  int? _governorateId;
+  int? _areaId;
+  String? _governorateName;
+  String? _areaName;
 
   void setPreSurveyInfo({
     String? researcherName,
@@ -81,6 +85,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     int? apartmentsPerFloor,
     int? selectedFloor,
     int? selectedApartment,
+    int? governorateId,
+    int? areaId,
+    String? governorateName,
+    String? areaName,
   }) {
     _researcherName = researcherName;
     _supervisorName = supervisorName;
@@ -99,6 +107,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     _apartmentsPerFloor = apartmentsPerFloor;
     _selectedFloor = selectedFloor;
     _selectedApartment = selectedApartment;
+    _governorateId = governorateId;
+    _areaId = areaId;
+    _governorateName = governorateName;
+    _areaName = areaName;
   }
 
   Future<void> loadSurvey(int surveyId) async {
@@ -146,6 +158,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
               apartmentsPerFloor: _apartmentsPerFloor,
               selectedFloor: _selectedFloor,
               selectedApartment: _selectedApartment,
+              governorateId: _governorateId,
+              areaId: _areaId,
+              governorateName: _governorateName,
+              areaName: _areaName,
             );
             //print('   _surveyAnswers created with: researcher=${_researcherName}, supervisor=${_supervisorName}, city=${_cityName}');
             //print('   IDs: researcher=$_researcherId, supervisor=$_supervisorId, city=$_cityId');
@@ -183,6 +199,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                 apartmentsPerFloor: _apartmentsPerFloor,
                 selectedFloor: _selectedFloor,
                 selectedApartment: _selectedApartment,
+                governorateId: _governorateId,
+                areaId: _areaId,
+                governorateName: _governorateName,
+                areaName: _areaName,
               );
 
               // Save immediately
@@ -213,6 +233,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                   apartmentsPerFloor: _apartmentsPerFloor,
                   selectedFloor: _selectedFloor,
                   selectedApartment: _selectedApartment,
+                  governorateId: _governorateId,
+                  areaId: _areaId,
+                  governorateName: _governorateName,
+                  areaName: _areaName,
                 );
               } else {
                 // Has answers
@@ -242,6 +266,8 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                   apartmentsPerFloor: _apartmentsPerFloor,
                   selectedFloor: _selectedFloor,
                   selectedApartment: _selectedApartment,
+                  governorateId: _governorateId,
+                  areaId: _areaId,
                   startedAt: newStartTime, // Update start time!
                 );
                 //print('   Updated: researcher=${_researcherName}, supervisor=${_supervisorName}, city=${_cityName}');
@@ -323,7 +349,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         final hasRepetitionCondition = group.targetConditions.any(
           (c) => c.actionEnum == ConditionAction.repetition,
         );
-        
+
         final repetitions = _groupRepetitions[group.id] ?? 1;
 
         for (final question in group.questions) {
@@ -336,11 +362,18 @@ class SurveyDetailsViewModel extends ChangeNotifier {
               _groupVisibility[96] = true;
             }
           }
-          
+
           // For questions in repeating groups, evaluate for each instance
           if (hasRepetitionCondition && question.sourceConditions.isNotEmpty) {
-            for (int instanceIndex = 0; instanceIndex < repetitions; instanceIndex++) {
-              _evaluateQuestionConditions(question, groupInstanceId: instanceIndex);
+            for (
+              int instanceIndex = 0;
+              instanceIndex < repetitions;
+              instanceIndex++
+            ) {
+              _evaluateQuestionConditions(
+                question,
+                groupInstanceId: instanceIndex,
+              );
             }
           } else {
             // For non-repeating groups, evaluate without instanceId
@@ -399,11 +432,14 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         for (final question in group.questions) {
           for (final condition in question.sourceConditions) {
             if (condition.actionEnum == ConditionAction.show) {
-              if (condition.targetTypeEnum == TargetType.question && condition.targetQuestionId != null) {
+              if (condition.targetTypeEnum == TargetType.question &&
+                  condition.targetQuestionId != null) {
                 questionsWithShowConditions.add(condition.targetQuestionId!);
-              } else if (condition.targetTypeEnum == TargetType.group && condition.targetGroupId != null) {
+              } else if (condition.targetTypeEnum == TargetType.group &&
+                  condition.targetGroupId != null) {
                 groupsWithShowConditions.add(condition.targetGroupId!);
-              } else if (condition.targetTypeEnum == TargetType.section && condition.targetSectionId != null) {
+              } else if (condition.targetTypeEnum == TargetType.section &&
+                  condition.targetSectionId != null) {
                 sectionsWithShowConditions.add(condition.targetSectionId!);
               }
             }
@@ -418,11 +454,14 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         for (final question in section.questions) {
           for (final condition in question.sourceConditions) {
             if (condition.actionEnum == ConditionAction.show) {
-              if (condition.targetTypeEnum == TargetType.question && condition.targetQuestionId != null) {
+              if (condition.targetTypeEnum == TargetType.question &&
+                  condition.targetQuestionId != null) {
                 questionsWithShowConditions.add(condition.targetQuestionId!);
-              } else if (condition.targetTypeEnum == TargetType.group && condition.targetGroupId != null) {
+              } else if (condition.targetTypeEnum == TargetType.group &&
+                  condition.targetGroupId != null) {
                 groupsWithShowConditions.add(condition.targetGroupId!);
-              } else if (condition.targetTypeEnum == TargetType.section && condition.targetSectionId != null) {
+              } else if (condition.targetTypeEnum == TargetType.section &&
+                  condition.targetSectionId != null) {
                 sectionsWithShowConditions.add(condition.targetSectionId!);
               }
             }
@@ -470,8 +509,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         _questionRequired[question.id] = question.isRequired;
       }
     }
-    
-    print('🔄 Reset: ${questionsWithShowConditions.length} questions, ${groupsWithShowConditions.length} groups hidden by default (Show conditions)');
+
+    print(
+      '🔄 Reset: ${questionsWithShowConditions.length} questions, ${groupsWithShowConditions.length} groups hidden by default (Show conditions)',
+    );
   }
 
   void _evaluateGroupConditions(QuestionGroupModel group) {
@@ -553,7 +594,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     }
   }
 
-  void _evaluateQuestionConditions(QuestionModel question, {int? groupInstanceId}) {
+  void _evaluateQuestionConditions(
+    QuestionModel question, {
+    int? groupInstanceId,
+  }) {
     // Evaluate all sourceConditions from this question
     if (question.sourceConditions.isNotEmpty) {
       //print('🔍 Evaluating ${question.sourceConditions.length} conditions for question ${question.id} (${question.code}) [instance: $groupInstanceId]');
@@ -609,7 +653,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
 
       for (final condition in conditions) {
         // Use groupInstanceId when getting answer for instance-specific evaluation
-        final answer = _getAnswerValue(condition.sourceQuestionId, groupInstanceId: groupInstanceId);
+        final answer = _getAnswerValue(
+          condition.sourceQuestionId,
+          groupInstanceId: groupInstanceId,
+        );
         //print('   Condition: value=${condition.value}, operator=${condition.operatorEnum}');
         //print('   Answer value: $answer');
 
@@ -629,7 +676,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         _applyConditionAction(firstCondition, groupInstanceId: groupInstanceId);
       } else {
         //print('   ❌ No conditions met → applying reverse action');
-        _applyReverseConditionAction(firstCondition, groupInstanceId: groupInstanceId);
+        _applyReverseConditionAction(
+          firstCondition,
+          groupInstanceId: groupInstanceId,
+        );
       }
     }
   }
@@ -729,7 +779,11 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     switch (targetType) {
       case TargetType.question:
         if (condition.targetQuestionId != null) {
-          _applyQuestionAction(condition.targetQuestionId!, action, groupInstanceId: groupInstanceId);
+          _applyQuestionAction(
+            condition.targetQuestionId!,
+            action,
+            groupInstanceId: groupInstanceId,
+          );
         }
         break;
       case TargetType.group:
@@ -752,7 +806,11 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     switch (targetType) {
       case TargetType.question:
         if (condition.targetQuestionId != null) {
-          _applyReverseQuestionAction(condition.targetQuestionId!, action, groupInstanceId: groupInstanceId);
+          _applyReverseQuestionAction(
+            condition.targetQuestionId!,
+            action,
+            groupInstanceId: groupInstanceId,
+          );
         }
         break;
       case TargetType.group:
@@ -768,14 +826,20 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     }
   }
 
-  void _applyQuestionAction(int questionId, ConditionAction action, {int? groupInstanceId}) {
+  void _applyQuestionAction(
+    int questionId,
+    ConditionAction action, {
+    int? groupInstanceId,
+  }) {
     switch (action) {
       case ConditionAction.show:
         if (groupInstanceId != null) {
           // Instance-specific visibility
           final instanceKey = '${questionId}_$groupInstanceId';
           _instanceQuestionVisibility[instanceKey] = true;
-          print('✅ SHOW Question $questionId [instance $groupInstanceId] → visible=true');
+          print(
+            '✅ SHOW Question $questionId [instance $groupInstanceId] → visible=true',
+          );
         } else {
           // General visibility (affects all instances)
           _questionVisibility[questionId] = true;
@@ -786,7 +850,9 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         if (groupInstanceId != null) {
           final instanceKey = '${questionId}_$groupInstanceId';
           _instanceQuestionVisibility[instanceKey] = false;
-          print('❌ HIDE Question $questionId [instance $groupInstanceId] → visible=false');
+          print(
+            '❌ HIDE Question $questionId [instance $groupInstanceId] → visible=false',
+          );
         } else {
           _questionVisibility[questionId] = false;
           print('❌ HIDE Question $questionId → visible=false');
@@ -914,7 +980,11 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     }
   }
 
-  void _applyReverseQuestionAction(int questionId, ConditionAction action, {int? groupInstanceId}) {
+  void _applyReverseQuestionAction(
+    int questionId,
+    ConditionAction action, {
+    int? groupInstanceId,
+  }) {
     // Get the default state from the original question
     final question = _findQuestionById(questionId);
     if (question == null) return;
@@ -925,10 +995,14 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         if (groupInstanceId != null) {
           final instanceKey = '${questionId}_$groupInstanceId';
           _instanceQuestionVisibility[instanceKey] = false;
-          print('🔄 REVERSE SHOW: Question $questionId [instance $groupInstanceId] → visible=false');
+          print(
+            '🔄 REVERSE SHOW: Question $questionId [instance $groupInstanceId] → visible=false',
+          );
         } else {
           _questionVisibility[questionId] = false;
-          print('🔄 REVERSE SHOW: Question $questionId → visible=false (condition not met)');
+          print(
+            '🔄 REVERSE SHOW: Question $questionId → visible=false (condition not met)',
+          );
         }
         break;
       case ConditionAction.hide:
@@ -1166,7 +1240,9 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       if (_instanceQuestionVisibility.containsKey(instanceKey)) {
         final result = _instanceQuestionVisibility[instanceKey]!;
         if (questionId == 30861) {
-          print('🔍 isQuestionVisible(30861, instance=$groupInstanceId): found in _instanceQuestionVisibility → $result');
+          print(
+            '🔍 isQuestionVisible(30861, instance=$groupInstanceId): found in _instanceQuestionVisibility → $result',
+          );
         }
         return result;
       }
@@ -1174,7 +1250,9 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     // Fall back to general question visibility
     final result = _questionVisibility[questionId] ?? true;
     if (questionId == 30861) {
-      print('🔍 isQuestionVisible(30861, instance=$groupInstanceId): fallback to _questionVisibility → $result');
+      print(
+        '🔍 isQuestionVisible(30861, instance=$groupInstanceId): fallback to _questionVisibility → $result',
+      );
     }
     return result;
   }
@@ -1359,10 +1437,15 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         //print('🔄 Re-evaluating conditions after saving answer...');
         // Re-evaluate conditions - pass groupInstanceId for instance-specific evaluation
         _evaluateAllConditions();
-        
+
         // Also evaluate instance-specific conditions if this question has sourceConditions
-        if (question != null && question.sourceConditions.isNotEmpty && groupInstanceId != null) {
-          _evaluateQuestionConditions(question, groupInstanceId: groupInstanceId);
+        if (question != null &&
+            question.sourceConditions.isNotEmpty &&
+            groupInstanceId != null) {
+          _evaluateQuestionConditions(
+            question,
+            groupInstanceId: groupInstanceId,
+          );
         }
 
         notifyListeners();
