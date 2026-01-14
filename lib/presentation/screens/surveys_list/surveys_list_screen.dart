@@ -5,6 +5,7 @@ import 'package:survey/presentation/screens/surveys_list/viewmodel/surveys_list_
 import 'package:survey/presentation/screens/survey_details/viewmodel/survey_details_viewmodel.dart';
 import 'package:survey/presentation/screens/tasks/tasks_screen.dart';
 import 'package:survey/core/di/injection.dart';
+import 'package:survey/data/models/survey_model.dart';
 
 class SurveysListScreen extends StatefulWidget {
   const SurveysListScreen({super.key});
@@ -48,9 +49,9 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
               children: [
                 // بدء استبيان - كارت كبير (يروح على صفحة الاستبيانات)
                 _buildStartSurveyCard(context, viewModel),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // عنوان السكشن
                 const Padding(
                   padding: EdgeInsets.only(right: 8, bottom: 12),
@@ -63,7 +64,7 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
                     ),
                   ),
                 ),
-                
+
                 // رفع الاستبيانات و المواقع في صف واحد
                 Row(
                   children: [
@@ -108,9 +109,12 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
     );
   }
 
-  Widget _buildStartSurveyCard(BuildContext context, SurveysListViewModel viewModel) {
+  Widget _buildStartSurveyCard(
+    BuildContext context,
+    SurveysListViewModel viewModel,
+  ) {
     final hasSurveys = viewModel.surveys.isNotEmpty;
-    
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -298,9 +302,7 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
   void _navigateToSurveysList(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const _SurveysListPage(),
-      ),
+      MaterialPageRoute(builder: (context) => const _SurveysListPage()),
     );
   }
 
@@ -308,10 +310,12 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        icon: const Icon(
+          Icons.cloud_upload,
+          color: Color(0xff25935F),
+          size: 48,
         ),
-        icon: const Icon(Icons.cloud_upload, color: Color(0xff25935F), size: 48),
         title: const Text(
           'رفع الاستبيانات',
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -351,10 +355,7 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
               children: [
                 CircularProgressIndicator(),
                 SizedBox(height: 16),
-                Text(
-                  'جاري رفع الاستبيانات...',
-                  style: TextStyle(fontSize: 16),
-                ),
+                Text('جاري رفع الاستبيانات...', style: TextStyle(fontSize: 16)),
               ],
             ),
           ),
@@ -399,14 +400,22 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
                     children: [
                       if (uploaded > 0)
                         Chip(
-                          avatar: const Icon(Icons.check, color: Colors.white, size: 16),
+                          avatar: const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 16,
+                          ),
                           label: Text('$uploaded نجح'),
                           backgroundColor: Colors.green,
                           labelStyle: const TextStyle(color: Colors.white),
                         ),
                       if (failed > 0)
                         Chip(
-                          avatar: const Icon(Icons.close, color: Colors.white, size: 16),
+                          avatar: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 16,
+                          ),
                           label: Text('$failed فشل'),
                           backgroundColor: Colors.red,
                           labelStyle: const TextStyle(color: Colors.white),
@@ -452,215 +461,364 @@ class _SurveysListPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: const Color(0xff25935F),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'الاستبيانات المتاحة',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: Consumer<SurveysListViewModel>(
-        builder: (context, viewModel, child) {
-          if (viewModel.state == SurveysListState.loading &&
-              viewModel.surveys.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      backgroundColor: Colors.white,
+      body: Column(
+        children: [
+          _buildHeader(context),
+          Expanded(
+            child: Consumer<SurveysListViewModel>(
+              builder: (context, viewModel, child) {
+                if (viewModel.state == SurveysListState.loading &&
+                    viewModel.surveys.isEmpty) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          if (viewModel.state == SurveysListState.error &&
-              viewModel.surveys.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 80,
-                      color: Colors.red.shade300,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      viewModel.errorMessage ?? 'حدث خطأ',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.black87,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      onPressed: () => viewModel.loadSurveys(),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('إعادة المحاولة'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xff25935F),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                if (viewModel.state == SurveysListState.error &&
+                    viewModel.surveys.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 80,
+                            color: Colors.red.shade300,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            viewModel.errorMessage ?? 'حدث خطأ',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.black87,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: () => viewModel.loadSurveys(),
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('إعادة المحاولة'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xff25935F),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            );
-          }
+                  );
+                }
 
-          if (viewModel.surveys.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.assignment_outlined,
-                    size: 80,
-                    color: Colors.grey.shade400,
+                if (viewModel.surveys.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.assignment_outlined,
+                          size: 80,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'لا توجد استبيانات متاحة',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () => viewModel.refresh(),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    itemCount: viewModel.surveys.length,
+                    itemBuilder: (context, index) {
+                      final survey = viewModel.surveys[index];
+                      return _SurveyCard(
+                        survey: survey,
+                        onTap: () {
+                          final startTime = DateTime.now();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PreSurveyInfoScreen(
+                                surveyId: survey.id,
+                                surveyCode: survey.code,
+                                startTime: startTime,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'لا توجد استبيانات متاحة',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey.shade600,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: () => viewModel.refresh(),
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: viewModel.surveys.length,
-              itemBuilder: (context, index) {
-                final survey = viewModel.surveys[index];
-                return _SurveyListItem(
-                  name: survey.name,
-                  code: survey.code,
-                  onTap: () {
-                    final startTime = DateTime.now();
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => PreSurveyInfoScreen(
-                          surveyId: survey.id,
-                          surveyCode: survey.code,
-                          startTime: startTime,
-                        ),
-                      ),
-                    );
-                  },
                 );
               },
             ),
-          );
-        },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 16,
+        bottom: 24,
+        left: 16,
+        right: 16,
+      ),
+      decoration: const BoxDecoration(
+        color: Color(0xff25935F),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+              ),
+              const Text(
+                'الاستبيانات',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 48), // Balance for centering title
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'عدد الاستبيانات المتاحة',
+            style: TextStyle(color: Colors.white70, fontSize: 14),
+          ),
+          const SizedBox(height: 8),
+          Consumer<SurveysListViewModel>(
+            builder: (context, viewModel, _) {
+              return Text(
+                '${viewModel.totalCount}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
 }
 
-class _SurveyListItem extends StatelessWidget {
-  final String name;
-  final String code;
+class _SurveyCard extends StatelessWidget {
+  final SurveyModel survey;
   final VoidCallback onTap;
 
-  const _SurveyListItem({
-    required this.name,
-    required this.code,
-    required this.onTap,
-  });
+  const _SurveyCard({required this.survey, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [const Color(0xff25935F).withOpacity(0.15), Colors.white],
+          stops: const [0.0, 0.4],
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.1),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xff25935F).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.assignment,
-                    color: Color(0xff25935F),
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        survey.name,
                         style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'كود: $code',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          height: 1.3,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xff25935F).withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.assignment,
+                        color: Color(0xff25935F),
+                        size: 24,
+                      ),
+                    ),
+                  ],
                 ),
-                const Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Colors.grey,
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Text(
+                      survey.isActive ? 'نشط' : 'غير نشط',
+                      style: TextStyle(
+                        color: survey.isActive ? Colors.green : Colors.red,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      width: 1,
+                      height: 12,
+                      color: Colors.grey.shade400,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'الإصدار ${survey.version}',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  survey.description,
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    if (survey.scope.isNotEmpty) ...[
+                      _buildChip(icon: Icons.category, label: survey.scope),
+                      const SizedBox(width: 12),
+                    ],
+                    _buildChip(
+                      icon: Icons.language,
+                      label: survey.language == 'ar' ? 'عربي' : 'English',
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-        ),
+          InkWell(
+            onTap: onTap,
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: const BoxDecoration(
+                color: Color(0xff25935F),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(20),
+                  bottomRight: Radius.circular(20),
+                ),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'بدء الاستبيان',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Icon(Icons.arrow_forward, color: Colors.white, size: 20),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChip({required IconData icon, required String label}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.05),
+            offset: const Offset(0, 2),
+            blurRadius: 4,
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: Colors.grey.shade600),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade800,
+            ),
+          ),
+        ],
       ),
     );
   }

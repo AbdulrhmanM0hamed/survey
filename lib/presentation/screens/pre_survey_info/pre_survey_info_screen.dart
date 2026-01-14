@@ -50,7 +50,9 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
   @override
   void initState() {
     super.initState();
-    _remoteDataSource = ManagementInformationRemoteDataSourceImpl(dioClient: Injection.dioClient);
+    _remoteDataSource = ManagementInformationRemoteDataSourceImpl(
+      dioClient: Injection.dioClient,
+    );
     _localDataSource = ManagementInformationLocalDataSourceImpl();
     _loadCities();
   }
@@ -89,9 +91,10 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
             citiesResponse,
           );
         } catch (e) {
-          citiesResponse = await _localDataSource.getCachedManagementInformations(
-            ManagementInformationType.cityName,
-          );
+          citiesResponse = await _localDataSource
+              .getCachedManagementInformations(
+                ManagementInformationType.cityName,
+              );
         }
       } else {
         citiesResponse = await _localDataSource.getCachedManagementInformations(
@@ -202,10 +205,8 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 icon: Icons.home_work,
                 controller: _neighborhoodController,
                 hintText: 'أدخل اسم الحى أو القرية',
+                isOptional: true,
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'يرجى إدخال اسم الحى / القرية';
-                  }
                   return null;
                 },
               ),
@@ -217,10 +218,8 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 icon: Icons.signpost,
                 controller: _streetController,
                 hintText: 'أدخل اسم الشارع',
+                isOptional: true,
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'يرجى إدخال اسم الشارع';
-                  }
                   return null;
                 },
               ),
@@ -330,7 +329,10 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                   children: [
                     Text(
                       'المتابعة',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     SizedBox(width: 8),
                     Icon(Icons.arrow_forward),
@@ -362,7 +364,11 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                     color: const Color(0xff25935F).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.location_city, color: Color(0xff25935F), size: 24),
+                  child: const Icon(
+                    Icons.location_city,
+                    color: Color(0xff25935F),
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 const Text(
@@ -392,7 +398,10 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
               Center(
                 child: Column(
                   children: [
-                    Text(_citiesError!, style: const TextStyle(color: Colors.red)),
+                    Text(
+                      _citiesError!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
                     TextButton(
                       onPressed: _loadCities,
                       child: const Text('إعادة المحاولة'),
@@ -420,7 +429,9 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                   contentPadding: EdgeInsets.zero,
                 );
               }),
-            if (_selectedCity == null && !_isLoadingCities && _cities.isNotEmpty)
+            if (_selectedCity == null &&
+                !_isLoadingCities &&
+                _cities.isNotEmpty)
               FormField<ManagementInformationModel>(
                 validator: (value) {
                   if (_selectedCity == null) return 'يرجى اختيار المدينة';
@@ -455,6 +466,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
     required String hintText,
     int maxLines = 1,
     required String? Function(String?) validator,
+    bool isOptional = false,
   }) {
     return Card(
       elevation: 2,
@@ -477,15 +489,31 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 const SizedBox(width: 12),
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
+                if (isOptional) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    '(اختياري)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.normal,
+                    ),
+                  ),
+                ],
                 const Spacer(),
                 Container(
                   width: 12,
                   height: 12,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: controller.text.isNotEmpty ? Colors.green : Colors.red,
+                    color: controller.text.isNotEmpty
+                        ? Colors.green
+                        : (isOptional ? Colors.grey.shade400 : Colors.red),
                   ),
                 ),
               ],
@@ -506,11 +534,17 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xff25935F), width: 2),
+                  borderSide: const BorderSide(
+                    color: Color(0xff25935F),
+                    width: 2,
+                  ),
                 ),
                 filled: true,
                 fillColor: Colors.grey.shade50,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
               validator: validator,
               onChanged: (value) => setState(() {}),
@@ -553,7 +587,10 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 Expanded(
                   child: Text(
                     title,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -578,11 +615,17 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xff25935F), width: 2),
+                  borderSide: const BorderSide(
+                    color: Color(0xff25935F),
+                    width: 2,
+                  ),
                 ),
                 filled: true,
                 fillColor: Colors.grey.shade50,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
               ),
               validator: validator,
               onChanged: onChanged,
@@ -591,11 +634,16 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 16,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xff25935F).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xff25935F).withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: const Color(0xff25935F).withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
