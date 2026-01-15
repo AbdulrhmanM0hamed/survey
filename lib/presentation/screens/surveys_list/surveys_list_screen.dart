@@ -40,12 +40,6 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
           ),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            onPressed: () => HiveService.logout(context),
-            icon: const Icon(Icons.logout, color: Colors.white),
-          ),
-        ],
       ),
       body: Consumer<SurveysListViewModel>(
         builder: (context, viewModel, child) {
@@ -107,6 +101,33 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
                       ),
                     ),
                   ],
+                ),
+
+                const SizedBox(height: 80),
+
+                // زر تسجيل الخروج
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _logout(context),
+                    icon: const Icon(Icons.logout),
+                    label: const Text(
+                      'تسجيل الخروج',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade600,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 2,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -311,6 +332,46 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
       context,
       MaterialPageRoute(builder: (context) => const _SurveysListPage()),
     );
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        icon: const Icon(
+          Icons.logout,
+          color: Colors.red,
+          size: 48,
+        ),
+        title: const Text(
+          'تسجيل الخروج',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'هل أنت متأكد من تسجيل الخروج؟',
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('تسجيل الخروج'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && context.mounted) {
+      HiveService.logout(context);
+    }
   }
 
   Future<void> _uploadSurveys(BuildContext context) async {

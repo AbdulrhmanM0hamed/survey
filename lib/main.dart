@@ -31,7 +31,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => Injection.loginViewModel),
       ],
       child: MaterialApp(
-        title: 'المسح الميداني للباحة',
+        title: 'المسح الميداني ',
         debugShowCheckedModeBanner: false,
         locale: const Locale('ar'),
         supportedLocales: const [Locale('ar'), Locale('en')],

@@ -270,6 +270,10 @@ class ExcelExportServiceSyncfusion {
       {'type': 'basic', 'text': 'الحالة'},
       {'type': 'basic', 'text': 'خط العرض (Latitude)'},
       {'type': 'basic', 'text': 'خط الطول (Longitude)'},
+      {'type': 'basic', 'text': 'عدد الأدوار'},
+      {'type': 'basic', 'text': 'عدد الشقق في الدور'},
+      {'type': 'basic', 'text': 'الدور المختار'},
+      {'type': 'basic', 'text': 'الشقة المختارة'},
     ]);
 
     // Question columns
@@ -679,6 +683,12 @@ class ExcelExportServiceSyncfusion {
           case 'اسم المشرف':
             cellValue = surveyAnswers.supervisorName ?? '';
             break;
+          case 'اسم المحافظة':
+            cellValue = surveyAnswers.governorateName ?? '';
+            break;
+          case 'اسم المنطقة':
+            cellValue = surveyAnswers.areaName ?? '';
+            break;
           case 'اسم المدينة':
             cellValue = surveyAnswers.cityName ?? '';
             break;
@@ -722,6 +732,18 @@ class ExcelExportServiceSyncfusion {
             break;
           case 'الحالة':
             cellValue = surveyAnswers.isDraft ? 'مسودة' : 'مكتمل';
+            break;
+          case 'عدد الأدوار':
+            cellValue = surveyAnswers.buildingFloorsCount?.toString() ?? '';
+            break;
+          case 'عدد الشقق في الدور':
+            cellValue = surveyAnswers.apartmentsPerFloor?.toString() ?? '';
+            break;
+          case 'الدور المختار':
+            cellValue = surveyAnswers.selectedFloor?.toString() ?? '';
+            break;
+          case 'الشقة المختارة':
+            cellValue = surveyAnswers.selectedApartment?.toString() ?? '';
             break;
         }
         cell.setText(cellValue);
@@ -910,6 +932,12 @@ class ExcelExportServiceSyncfusion {
           case 'اسم المشرف':
             cellValue = surveyAnswers.supervisorName ?? '';
             break;
+          case 'اسم المحافظة':
+            cellValue = surveyAnswers.governorateName ?? '';
+            break;
+          case 'اسم المنطقة':
+            cellValue = surveyAnswers.areaName ?? '';
+            break;
           case 'اسم المدينة':
             cellValue = surveyAnswers.cityName ?? '';
             break;
@@ -953,6 +981,18 @@ class ExcelExportServiceSyncfusion {
             break;
           case 'الحالة':
             cellValue = surveyAnswers.isDraft ? 'مسودة' : 'مكتمل';
+            break;
+          case 'عدد الأدوار':
+            cellValue = surveyAnswers.buildingFloorsCount?.toString() ?? '';
+            break;
+          case 'عدد الشقق في الدور':
+            cellValue = surveyAnswers.apartmentsPerFloor?.toString() ?? '';
+            break;
+          case 'الدور المختار':
+            cellValue = surveyAnswers.selectedFloor?.toString() ?? '';
+            break;
+          case 'الشقة المختارة':
+            cellValue = surveyAnswers.selectedApartment?.toString() ?? '';
             break;
         }
       } else {

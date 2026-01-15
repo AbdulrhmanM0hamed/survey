@@ -51,6 +51,10 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           apartmentsPerFloor: args['apartmentsPerFloor'] as int?,
           selectedFloor: args['selectedFloor'] as int?,
           selectedApartment: args['selectedApartment'] as int?,
+          governorateId: args['governorateId'] as int?,
+          areaId: args['areaId'] as int?,
+          governorateName: args['governorateName'] as String?,
+          areaName: args['areaName'] as String?,
         );
       }
 

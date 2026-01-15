@@ -54,7 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 
                 // Title
                 const Text(
-                  'المسح الميداني للباحة',
+                  'المسح الميداني ',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
