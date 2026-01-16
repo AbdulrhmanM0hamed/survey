@@ -21,6 +21,21 @@ class _TasksScreenState extends State<TasksScreen> {
     });
   }
 
+  Future<void> _manualSync(BuildContext context) async {
+    final viewModel = context.read<TasksViewModel>();
+    final result = await viewModel.manualSync();
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'تمت المزامنة'),
+          backgroundColor: result['success'] ? Colors.green : Colors.orange,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
   Future<void> _openInGoogleMaps(double latitude, double longitude) async {
     // Try geo: scheme first (works better on Android)
     final geoUrl = Uri.parse('geo:$latitude,$longitude?q=$latitude,$longitude');
@@ -107,6 +122,57 @@ class _TasksScreenState extends State<TasksScreen> {
           backgroundColor: const Color(0xff25935F),
           foregroundColor: Colors.white,
           actions: [
+            Consumer<TasksViewModel>(
+              builder: (context, viewModel, _) {
+                if (viewModel.pendingSyncCount > 0) {
+                  return Stack(
+                    children: [
+                      IconButton(
+                        icon: viewModel.isSyncing
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Icon(Icons.cloud_upload),
+                        onPressed: viewModel.isSyncing
+                            ? null
+                            : () => _manualSync(context),
+                        tooltip: 'مزامنة المهام المعلقة',
+                      ),
+                      Positioned(
+                        right: 8,
+                        top: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            '${viewModel.pendingSyncCount}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: () => context.read<TasksViewModel>().loadTasks(),
@@ -163,21 +229,67 @@ class _TasksScreenState extends State<TasksScreen> {
                   );
                 }
 
-                return RefreshIndicator(
-                  onRefresh: () => viewModel.loadTasks(),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: viewModel.tasks.length,
-                    itemBuilder: (context, index) {
-                      final task = viewModel.tasks[index];
-                      return _TaskCard(
-                        task: task,
-                        isCompleting: viewModel.completingTaskId == task.id,
-                        onOpenMap: () => _openInGoogleMaps(task.latitude, task.longitude),
-                        onComplete: task.isDone ? null : () => _confirmComplete(task),
-                      );
-                    },
-                  ),
+                return Column(
+                  children: [
+                    // Pending sync banner
+                    if (viewModel.pendingSyncCount > 0)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange.shade300),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.cloud_upload, color: Colors.orange.shade700),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'لديك ${viewModel.pendingSyncCount} مهمة معلقة للمزامنة',
+                                style: TextStyle(
+                                  color: Colors.orange.shade900,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            if (viewModel.isSyncing)
+                              const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            else
+                              TextButton(
+                                onPressed: () => _manualSync(context),
+                                child: const Text('مزامنة الآن'),
+                              ),
+                          ],
+                        ),
+                      ),
+                    
+                    Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: () => viewModel.loadTasks(),
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: viewModel.tasks.length,
+                          itemBuilder: (context, index) {
+                            final task = viewModel.tasks[index];
+                            return _TaskCard(
+                              task: task,
+                              isCompleting: viewModel.completingTaskId == task.id,
+                              onOpenMap: () => _openInGoogleMaps(task.latitude, task.longitude),
+                              onComplete: task.isDone ? null : () => _confirmComplete(task),
+                              isPendingSync: task.isLocallyCompleted,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
                 );
             }
           },
@@ -192,12 +304,14 @@ class _TaskCard extends StatelessWidget {
   final bool isCompleting;
   final VoidCallback onOpenMap;
   final VoidCallback? onComplete;
+  final bool isPendingSync;
 
   const _TaskCard({
     required this.task,
     required this.isCompleting,
     required this.onOpenMap,
     this.onComplete,
+    this.isPendingSync = false,
   });
 
   @override
@@ -256,16 +370,29 @@ class _TaskCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.green,
+                      color: isPendingSync ? Colors.orange : Colors.green,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text(
-                      'تمت الزيارة',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isPendingSync) ...[
+                          const Icon(
+                            Icons.cloud_upload,
+                            size: 12,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 4),
+                        ],
+                        Text(
+                          isPendingSync ? 'معلقة' : 'تمت الزيارة',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
               ],

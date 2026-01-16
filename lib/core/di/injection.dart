@@ -1,6 +1,7 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:survey/core/network/dio_client.dart';
 import 'package:survey/data/datasources/local/survey_local_datasource.dart';
+import 'package:survey/data/datasources/local/task_local_datasource.dart';
 import 'package:survey/data/datasources/remote/auth_remote_datasource.dart';
 import 'package:survey/data/datasources/remote/survey_remote_datasource.dart';
 import 'package:survey/data/datasources/remote/task_remote_datasource.dart';
@@ -22,6 +23,7 @@ class Injection {
   static late AuthRemoteDataSource _authRemoteDataSource;
   static late AuthRepository _authRepository;
   static late TaskRemoteDataSource _taskRemoteDataSource;
+  static late TaskLocalDataSource _taskLocalDataSource;
   static late TaskRepository _taskRepository;
 
   static void init() {
@@ -34,6 +36,7 @@ class Injection {
     _localDataSource = SurveyLocalDataSourceImpl();
     _authRemoteDataSource = AuthRemoteDataSourceImpl(dioClient: _dioClient);
     _taskRemoteDataSource = TaskRemoteDataSourceImpl(dioClient: _dioClient);
+    _taskLocalDataSource = TaskLocalDataSourceImpl();
 
     // Repositories
     _surveyRepository = SurveyRepositoryImpl(
@@ -42,7 +45,10 @@ class Injection {
       connectivity: _connectivity,
     );
     _authRepository = AuthRepositoryImpl(remoteDataSource: _authRemoteDataSource);
-    _taskRepository = TaskRepositoryImpl(remoteDataSource: _taskRemoteDataSource);
+    _taskRepository = TaskRepositoryImpl(
+      remoteDataSource: _taskRemoteDataSource,
+      localDataSource: _taskLocalDataSource,
+    );
   }
 
   // DioClient (for other screens that need it)

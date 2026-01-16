@@ -29,6 +29,9 @@ class SurveyDetailsViewModel extends ChangeNotifier {
   SurveyAnswersModel? _surveyAnswers;
   SurveyAnswersModel? get surveyAnswers => _surveyAnswers;
 
+  // Expose repository for direct access when needed
+  SurveyRepository get surveyRepository => repository;
+
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 

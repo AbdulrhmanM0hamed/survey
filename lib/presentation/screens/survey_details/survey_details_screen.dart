@@ -156,18 +156,45 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
               return Text(
                 viewModel.survey?.name ?? 'الاستبيان',
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
                 textAlign: TextAlign.center,
-                maxLines: 4,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               );
             },
           ),
           centerTitle: true,
+          titleSpacing: 0,
           actions: [
+            // زر إنهاء الاستبيان مبكراً
+            Consumer<SurveyDetailsViewModel>(
+              builder: (context, viewModel, child) {
+                return TextButton.icon(
+                  onPressed: () => _showEarlyCompletionDialog(context, viewModel),
+                  icon: const Icon(
+                    Icons.check_circle,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                  label: const Text(
+                    'إنهاء',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                );
+              },
+            ),
             Consumer<SurveyDetailsViewModel>(
               builder: (context, viewModel, child) {
                 return PopupMenuButton<String>(
@@ -1188,6 +1215,121 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _showEarlyCompletionDialog(
+    BuildContext context,
+    SurveyDetailsViewModel viewModel,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          icon: const Icon(
+            Icons.check_circle,
+            color: Color(0xff25935F),
+            size: 48,
+          ),
+          title: const Text(
+            'إنهاء الاستبيان الآن',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'هل تريد إنهاء الاستبيان في هذه المرحلة؟',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'سيتم حفظ جميع الإجابات التي تم إدخالها حتى الآن وتصديرها إلى Excel.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.pop(context, true),
+              icon: const Icon(Icons.check),
+              label: const Text('إنهاء الآن'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xff25935F),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    // Show processing dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('جاري حفظ الاستبيان...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      // Save current answers to Hive
+      await viewModel.surveyRepository.saveSurveyAnswers(
+        surveyAnswers: viewModel.surveyAnswers!,
+      );
+      
+      // Complete survey (saves to Excel and marks as done)
+      await viewModel.completeSurvey();
+
+      if (!context.mounted) return;
+      Navigator.pop(context); // Close processing dialog
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ تم إنهاء الاستبيان وحفظه بنجاح'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+        ),
+      );
+
+      // Go back to home/previous screen
+      Navigator.pop(context);
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context); // Close processing dialog
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('حدث خطأ أثناء الحفظ: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
   Future<void> _showExportDialog(

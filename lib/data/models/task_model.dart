@@ -8,6 +8,7 @@ class TaskModel extends Equatable {
   final DateTime taskDate;
   final bool isDone;
   final DateTime? completedAt;
+  final bool isLocallyCompleted; // Flag for offline completion
 
   const TaskModel({
     required this.id,
@@ -17,6 +18,7 @@ class TaskModel extends Equatable {
     required this.taskDate,
     required this.isDone,
     this.completedAt,
+    this.isLocallyCompleted = false,
   });
 
   factory TaskModel.fromJson(Map<String, dynamic> json) {
@@ -32,7 +34,21 @@ class TaskModel extends Equatable {
       completedAt: json['completedAt'] != null
           ? DateTime.parse(json['completedAt'])
           : null,
+      isLocallyCompleted: json['isLocallyCompleted'] ?? false,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'latitude': latitude,
+      'longitude': longitude,
+      'taskDate': taskDate.toIso8601String(),
+      'isDone': isDone,
+      'completedAt': completedAt?.toIso8601String(),
+      'isLocallyCompleted': isLocallyCompleted,
+    };
   }
 
   TaskModel copyWith({
@@ -43,6 +59,7 @@ class TaskModel extends Equatable {
     DateTime? taskDate,
     bool? isDone,
     DateTime? completedAt,
+    bool? isLocallyCompleted,
   }) {
     return TaskModel(
       id: id ?? this.id,
@@ -52,9 +69,19 @@ class TaskModel extends Equatable {
       taskDate: taskDate ?? this.taskDate,
       isDone: isDone ?? this.isDone,
       completedAt: completedAt ?? this.completedAt,
+      isLocallyCompleted: isLocallyCompleted ?? this.isLocallyCompleted,
     );
   }
 
   @override
-  List<Object?> get props => [id, title, latitude, longitude, taskDate, isDone, completedAt];
+  List<Object?> get props => [
+        id,
+        title,
+        latitude,
+        longitude,
+        taskDate,
+        isDone,
+        completedAt,
+        isLocallyCompleted,
+      ];
 }

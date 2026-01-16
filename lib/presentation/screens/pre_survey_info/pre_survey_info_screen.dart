@@ -330,26 +330,6 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 const SizedBox(height: 16),
               ],
 
-              // City Selection
-              // _buildSelectionCard<ManagementInformationModel>(
-              //   title: 'اسم المدينة',
-              //   icon: Icons.location_city,
-              //   items: _cities,
-              //   selectedItem: _selectedCity,
-              //   isLoading: _isLoadingCities,
-              //   error: _citiesError,
-              //   onRetry: _loadCities,
-              //   onChanged: (value) {
-              //     setState(() {
-              //       _selectedCity = value;
-              //     });
-              //   },
-              //   itemLabel: (item) => item.name,
-              //   emptyMessage: 'لا توجد مدن متاحة',
-              //   validationMessage: 'يرجى اختيار المدينة',
-              // ),
-              // const SizedBox(height: 16),
-
               // Neighborhood Name
               _buildTextFieldCard(
                 title: 'اسم الحى / القرية',
@@ -357,6 +337,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 controller: _neighborhoodController,
                 hintText: 'أدخل اسم الحى أو القرية',
                 isOptional: true,
+                showIndicator: false, // إخفاء النقطة
                 validator: (value) {
                   return null;
                 },
@@ -370,6 +351,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 controller: _streetController,
                 hintText: 'أدخل اسم الشارع',
                 isOptional: true,
+                showIndicator: false, // إخفاء النقطة
                 validator: (value) {
                   return null;
                 },
@@ -548,7 +530,8 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
+    
             if (isLoading)
               const Center(
                 child: Padding(
@@ -574,16 +557,84 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 child: Text(emptyMessage),
               )
             else
-              ...items.map((item) {
-                return RadioListTile<T>(
-                  title: Text(itemLabel(item)),
-                  value: item,
-                  groupValue: selectedItem,
-                  onChanged: onChanged,
-                  activeColor: const Color(0xff25935F),
-                  contentPadding: EdgeInsets.zero,
-                );
-              }),
+              // عرض الخيارات في Grid (شبكة)
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2, // عمودين في كل صف
+                  childAspectRatio: 3.5, // نسبة العرض للارتفاع
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                ),
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  final isSelected = selectedItem == item;
+                  
+                  return InkWell(
+                    onTap: () => onChanged(item),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: isSelected 
+                              ? const Color(0xff25935F) 
+                              : Colors.grey.shade300,
+                          width: isSelected ? 2 : 1,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                        color: isSelected 
+                            ? const Color(0xff25935F).withValues(alpha: 0.1)
+                            : Colors.transparent,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              itemLabel(item),
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected 
+                                    ? const Color(0xff25935F)
+                                    : Colors.black87,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isSelected 
+                                    ? const Color(0xff25935F)
+                                    : Colors.grey.shade400,
+                                width: 2,
+                              ),
+                              color: isSelected 
+                                  ? const Color(0xff25935F)
+                                  : Colors.transparent,
+                            ),
+                            child: isSelected
+                                ? const Icon(
+                                    Icons.check,
+                                    size: 14,
+                                    color: Colors.white,
+                                  )
+                                : null,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
             if (selectedItem == null && !isLoading && items.isNotEmpty)
               FormField<T>(
                 validator: (value) {
@@ -620,6 +671,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
     int maxLines = 1,
     required String? Function(String?) validator,
     bool isOptional = false,
+    bool showIndicator = true, // معامل جديد للتحكم في إظهار النقطة
   }) {
     return Card(
       elevation: 2,
@@ -659,16 +711,17 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                   ),
                 ],
                 const Spacer(),
-                Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: controller.text.isNotEmpty
-                        ? Colors.green
-                        : (isOptional ? Colors.grey.shade400 : Colors.red),
+                if (showIndicator) // إظهار النقطة فقط إذا كان showIndicator = true
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: controller.text.isNotEmpty
+                          ? Colors.green
+                          : (isOptional ? Colors.grey.shade400 : Colors.red),
+                    ),
                   ),
-                ),
               ],
             ),
             const SizedBox(height: 12),
