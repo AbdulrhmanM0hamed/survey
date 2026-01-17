@@ -9,6 +9,8 @@ import 'package:survey/presentation/widgets/question_widget.dart';
 import 'package:survey/presentation/widgets/question_widgets/rating_question_widget.dart';
 import 'package:survey/core/enums/question_type.dart';
 import 'package:survey/core/enums/condition_action.dart';
+import 'package:survey/core/enums/target_type.dart';
+
 
 class SurveyDetailsScreen extends StatefulWidget {
   final int surveyId;
@@ -519,20 +521,60 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
       }
     }
 
-    // Track which groups have been added to avoid duplicates at the end
+    // Create a map of source question ID to direct questions (for conditional direct questions)
+    final Map<int, List<QuestionModel>> sourceQuestionToDirectQuestions = {};
+    print('\n🔍 Building sourceQuestionToDirectQuestions map...');
+    for (var question in questions) {
+      for (var condition in question.targetConditions) {
+        if (condition.targetTypeEnum == TargetType.question) {
+          final sourceQuestionId = condition.sourceQuestionId;
+          print('   📌 Q${question.id} (${question.text}) is conditional on Q$sourceQuestionId');
+          if (!sourceQuestionToDirectQuestions.containsKey(sourceQuestionId)) {
+            sourceQuestionToDirectQuestions[sourceQuestionId] = [];
+          }
+          if (!sourceQuestionToDirectQuestions[sourceQuestionId]!.contains(question)) {
+            sourceQuestionToDirectQuestions[sourceQuestionId]!.add(question);
+            print('      ✅ Added to map: Q$sourceQuestionId → Q${question.id}');
+          }
+        }
+      }
+    }
+    print('📊 Total conditional mappings: ${sourceQuestionToDirectQuestions.length}');
+    sourceQuestionToDirectQuestions.forEach((sourceId, conditionalQuestions) {
+      print('   Q$sourceId triggers: ${conditionalQuestions.map((q) => 'Q${q.id}').join(', ')}');
+    });
+
+    // Track which groups and questions have been added to avoid duplicates
     final Set<int> addedGroupIds = {};
+    final Set<int> addedQuestionIds = {};
 
     // Separate rating questions from other questions
+    // IMPORTANT: Skip conditional questions in first pass - they'll be added after their trigger
+    print('\n🔄 Processing direct questions (first pass)...');
     for (var question in questions) {
+      // Skip if this question is a conditional question (has targetConditions with Show action)
+      final isConditionalQuestion = question.targetConditions.any(
+        (c) => c.actionEnum == ConditionAction.show && c.targetTypeEnum == TargetType.question,
+      );
+      
+      if (isConditionalQuestion) {
+        print('⏭️ Skipping conditional Q${question.id} (${question.text}) in first pass');
+        continue; // Skip for now, will be added after trigger
+      }
+      
       if (question.questionType == QuestionType.rating) {
+        print('⭐ Q${question.id} is rating question, adding to rating list');
         ratingQuestions.add(question);
       } else {
         // Add non-rating question
+        print('➕ Adding direct Q${question.id} (${question.text})');
         regularWidgets.add(_buildDirectQuestion(question, viewModel));
+        addedQuestionIds.add(question.id);
 
         // Check if this question has related groups
         final relatedGroups = sourceQuestionToGroups[question.id];
         if (relatedGroups != null && relatedGroups.isNotEmpty) {
+          print('   🔗 Q${question.id} has ${relatedGroups.length} related groups');
           for (var relatedGroup in relatedGroups) {
             // CRITICAL: Only show the group if THIS question is the trigger
             // For direct questions (not in a repeating group), groupInstanceId is null
@@ -542,19 +584,41 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
               groupInstanceId: null,
             );
 
-            //print('🔍 Q${question.id} → Group ${relatedGroup.id}: isTriggering=$isTriggering');
+            print('   🔍 Q${question.id} → Group ${relatedGroup.id}: isTriggering=$isTriggering');
 
             if (isTriggering) {
-              //print('   ✅ Adding Group ${relatedGroup.id} after Q${question.id}');
+              print('      ✅ Adding Group ${relatedGroup.id} after Q${question.id}');
               regularWidgets.add(
                 _buildQuestionGroup(
                   relatedGroup,
                   viewModel,
                   triggerSourceQuestionId: question.id,
+                  sourceQuestionToDirectQuestions: sourceQuestionToDirectQuestions,
                 ),
               );
               addedGroupIds.add(relatedGroup.id);
               groups.remove(relatedGroup);
+            }
+          }
+        }
+
+        // Check if this question has related direct questions (conditional questions)
+        final relatedDirectQuestions = sourceQuestionToDirectQuestions[question.id];
+        if (relatedDirectQuestions != null && relatedDirectQuestions.isNotEmpty) {
+          print('   🔗 Q${question.id} has ${relatedDirectQuestions.length} related conditional questions');
+          for (var relatedQuestion in relatedDirectQuestions) {
+            final isVisible = viewModel.isQuestionVisible(relatedQuestion.id);
+            final alreadyAdded = addedQuestionIds.contains(relatedQuestion.id);
+            print('      🔍 Conditional Q${relatedQuestion.id}: visible=$isVisible, alreadyAdded=$alreadyAdded');
+            
+            if (!alreadyAdded && isVisible) {
+              print('         ✅ Adding conditional Q${relatedQuestion.id} after Q${question.id}');
+              regularWidgets.add(_buildDirectQuestion(relatedQuestion, viewModel));
+              addedQuestionIds.add(relatedQuestion.id);
+            } else if (alreadyAdded) {
+              print('         ⏭️ Already added, skipping');
+            } else {
+              print('         ❌ Not visible, skipping');
             }
           }
         }
@@ -563,6 +627,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
 
     // Add any remaining groups that weren't linked to questions
     // Skip conditional groups (Show/Repetition) - they should only appear after their trigger question
+    print('\n🔄 Processing remaining groups...');
     for (var group in groups) {
       if (!addedGroupIds.contains(group.id)) {
         // Check if this group has any conditions that link it to a source question
@@ -573,11 +638,40 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
         );
 
         if (hasTriggeredCondition) {
-          //print('   ⏭️ Skipping triggered group ${group.id} in remaining groups (will be added by trigger question)');
+          print('   ⏭️ Skipping triggered group ${group.id} in remaining groups (will be added by trigger question)');
           continue;
         }
 
-        regularWidgets.add(_buildQuestionGroup(group, viewModel));
+        print('➕ Adding remaining Group ${group.id} (${group.name})');
+        regularWidgets.add(_buildQuestionGroup(
+          group, 
+          viewModel,
+          sourceQuestionToDirectQuestions: sourceQuestionToDirectQuestions,
+        ));
+        addedGroupIds.add(group.id);
+        
+        // Check if any questions in this group have related direct questions
+        for (var groupQuestion in group.questions) {
+          final relatedDirectQuestions = sourceQuestionToDirectQuestions[groupQuestion.id];
+          if (relatedDirectQuestions != null && relatedDirectQuestions.isNotEmpty) {
+            print('   🔗 Group ${group.id} question ${groupQuestion.id} has ${relatedDirectQuestions.length} related conditional questions');
+            for (var relatedQuestion in relatedDirectQuestions) {
+              final isVisible = viewModel.isQuestionVisible(relatedQuestion.id);
+              final alreadyAdded = addedQuestionIds.contains(relatedQuestion.id);
+              print('      🔍 Conditional Q${relatedQuestion.id}: visible=$isVisible, alreadyAdded=$alreadyAdded');
+              
+              if (!alreadyAdded && isVisible) {
+                print('         ✅ Adding conditional Q${relatedQuestion.id} after Group ${group.id} (triggered by Q${groupQuestion.id})');
+                regularWidgets.add(_buildDirectQuestion(relatedQuestion, viewModel));
+                addedQuestionIds.add(relatedQuestion.id);
+              } else if (alreadyAdded) {
+                print('         ⏭️ Already added, skipping');
+              } else {
+                print('         ❌ Not visible, skipping');
+              }
+            }
+          }
+        }
       }
     }
 
@@ -794,6 +888,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
     SurveyDetailsViewModel viewModel, {
     int? parentInstanceId,
     int? triggerSourceQuestionId, // Track source trigger for unique IDs
+    Map<int, List<QuestionModel>>? sourceQuestionToDirectQuestions,
   }) {
     final repetitions = viewModel.getGroupRepetitions(group.id);
     //print('🎨 Building group ${group.id} (${group.name}) with $repetitions repetitions, parentInstance=$parentInstanceId');
@@ -1006,8 +1101,29 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                             viewModel,
                             parentInstanceId: instanceIndex,
                             triggerSourceQuestionId: question.id,
+                            sourceQuestionToDirectQuestions: sourceQuestionToDirectQuestions,
                           ),
                         );
+                      }
+                    }
+                  }
+                  
+                  // NEW: Check if this question (inside group) has related direct conditional questions
+                  if (sourceQuestionToDirectQuestions != null) {
+                    final relatedDirectQuestions = sourceQuestionToDirectQuestions[question.id];
+                    if (relatedDirectQuestions != null && relatedDirectQuestions.isNotEmpty) {
+                      print('   🔗 [Inside Group ${group.id}] Q${question.id} has ${relatedDirectQuestions.length} related conditional questions');
+                      for (var relatedQuestion in relatedDirectQuestions) {
+                        final isVisible = viewModel.isQuestionVisible(relatedQuestion.id);
+                        // Can't use addedQuestionIds here as it's not in scope
+                        print('      🔍 Conditional Q${relatedQuestion.id}: visible=$isVisible');
+                        
+                        if (isVisible) {
+                          print('         ✅ Adding conditional Q${relatedQuestion.id} after Q${question.id} (inside Group ${group.id})');
+                          widgets.add(_buildDirectQuestion(relatedQuestion, viewModel));
+                        } else {
+                          print('         ❌ Not visible, skipping');
+                        }
                       }
                     }
                   }
