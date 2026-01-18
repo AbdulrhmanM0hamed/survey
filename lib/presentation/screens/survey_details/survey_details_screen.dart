@@ -11,7 +11,6 @@ import 'package:survey/core/enums/question_type.dart';
 import 'package:survey/core/enums/condition_action.dart';
 import 'package:survey/core/enums/target_type.dart';
 
-
 class SurveyDetailsScreen extends StatefulWidget {
   final int surveyId;
 
@@ -175,7 +174,8 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
             Consumer<SurveyDetailsViewModel>(
               builder: (context, viewModel, child) {
                 return TextButton.icon(
-                  onPressed: () => _showEarlyCompletionDialog(context, viewModel),
+                  onPressed: () =>
+                      _showEarlyCompletionDialog(context, viewModel),
                   icon: const Icon(
                     Icons.check_circle,
                     color: Colors.white,
@@ -190,7 +190,10 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                     ),
                   ),
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
@@ -528,20 +531,28 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
       for (var condition in question.targetConditions) {
         if (condition.targetTypeEnum == TargetType.question) {
           final sourceQuestionId = condition.sourceQuestionId;
-          print('   📌 Q${question.id} (${question.text}) is conditional on Q$sourceQuestionId');
+          print(
+            '   📌 Q${question.id} (${question.text}) is conditional on Q$sourceQuestionId',
+          );
           if (!sourceQuestionToDirectQuestions.containsKey(sourceQuestionId)) {
             sourceQuestionToDirectQuestions[sourceQuestionId] = [];
           }
-          if (!sourceQuestionToDirectQuestions[sourceQuestionId]!.contains(question)) {
+          if (!sourceQuestionToDirectQuestions[sourceQuestionId]!.contains(
+            question,
+          )) {
             sourceQuestionToDirectQuestions[sourceQuestionId]!.add(question);
             print('      ✅ Added to map: Q$sourceQuestionId → Q${question.id}');
           }
         }
       }
     }
-    print('📊 Total conditional mappings: ${sourceQuestionToDirectQuestions.length}');
+    print(
+      '📊 Total conditional mappings: ${sourceQuestionToDirectQuestions.length}',
+    );
     sourceQuestionToDirectQuestions.forEach((sourceId, conditionalQuestions) {
-      print('   Q$sourceId triggers: ${conditionalQuestions.map((q) => 'Q${q.id}').join(', ')}');
+      print(
+        '   Q$sourceId triggers: ${conditionalQuestions.map((q) => 'Q${q.id}').join(', ')}',
+      );
     });
 
     // Track which groups and questions have been added to avoid duplicates
@@ -554,14 +565,18 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
     for (var question in questions) {
       // Skip if this question is a conditional question (has targetConditions with Show action)
       final isConditionalQuestion = question.targetConditions.any(
-        (c) => c.actionEnum == ConditionAction.show && c.targetTypeEnum == TargetType.question,
+        (c) =>
+            c.actionEnum == ConditionAction.show &&
+            c.targetTypeEnum == TargetType.question,
       );
-      
+
       if (isConditionalQuestion) {
-        print('⏭️ Skipping conditional Q${question.id} (${question.text}) in first pass');
+        print(
+          '⏭️ Skipping conditional Q${question.id} (${question.text}) in first pass',
+        );
         continue; // Skip for now, will be added after trigger
       }
-      
+
       if (question.questionType == QuestionType.rating) {
         print('⭐ Q${question.id} is rating question, adding to rating list');
         ratingQuestions.add(question);
@@ -574,7 +589,9 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
         // Check if this question has related groups
         final relatedGroups = sourceQuestionToGroups[question.id];
         if (relatedGroups != null && relatedGroups.isNotEmpty) {
-          print('   🔗 Q${question.id} has ${relatedGroups.length} related groups');
+          print(
+            '   🔗 Q${question.id} has ${relatedGroups.length} related groups',
+          );
           for (var relatedGroup in relatedGroups) {
             // CRITICAL: Only show the group if THIS question is the trigger
             // For direct questions (not in a repeating group), groupInstanceId is null
@@ -584,16 +601,21 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
               groupInstanceId: null,
             );
 
-            print('   🔍 Q${question.id} → Group ${relatedGroup.id}: isTriggering=$isTriggering');
+            print(
+              '   🔍 Q${question.id} → Group ${relatedGroup.id}: isTriggering=$isTriggering',
+            );
 
             if (isTriggering) {
-              print('      ✅ Adding Group ${relatedGroup.id} after Q${question.id}');
+              print(
+                '      ✅ Adding Group ${relatedGroup.id} after Q${question.id}',
+              );
               regularWidgets.add(
                 _buildQuestionGroup(
                   relatedGroup,
                   viewModel,
                   triggerSourceQuestionId: question.id,
-                  sourceQuestionToDirectQuestions: sourceQuestionToDirectQuestions,
+                  sourceQuestionToDirectQuestions:
+                      sourceQuestionToDirectQuestions,
                 ),
               );
               addedGroupIds.add(relatedGroup.id);
@@ -603,17 +625,27 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
         }
 
         // Check if this question has related direct questions (conditional questions)
-        final relatedDirectQuestions = sourceQuestionToDirectQuestions[question.id];
-        if (relatedDirectQuestions != null && relatedDirectQuestions.isNotEmpty) {
-          print('   🔗 Q${question.id} has ${relatedDirectQuestions.length} related conditional questions');
+        final relatedDirectQuestions =
+            sourceQuestionToDirectQuestions[question.id];
+        if (relatedDirectQuestions != null &&
+            relatedDirectQuestions.isNotEmpty) {
+          print(
+            '   🔗 Q${question.id} has ${relatedDirectQuestions.length} related conditional questions',
+          );
           for (var relatedQuestion in relatedDirectQuestions) {
             final isVisible = viewModel.isQuestionVisible(relatedQuestion.id);
             final alreadyAdded = addedQuestionIds.contains(relatedQuestion.id);
-            print('      🔍 Conditional Q${relatedQuestion.id}: visible=$isVisible, alreadyAdded=$alreadyAdded');
-            
+            print(
+              '      🔍 Conditional Q${relatedQuestion.id}: visible=$isVisible, alreadyAdded=$alreadyAdded',
+            );
+
             if (!alreadyAdded && isVisible) {
-              print('         ✅ Adding conditional Q${relatedQuestion.id} after Q${question.id}');
-              regularWidgets.add(_buildDirectQuestion(relatedQuestion, viewModel));
+              print(
+                '         ✅ Adding conditional Q${relatedQuestion.id} after Q${question.id}',
+              );
+              regularWidgets.add(
+                _buildDirectQuestion(relatedQuestion, viewModel),
+              );
               addedQuestionIds.add(relatedQuestion.id);
             } else if (alreadyAdded) {
               print('         ⏭️ Already added, skipping');
@@ -638,31 +670,47 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
         );
 
         if (hasTriggeredCondition) {
-          print('   ⏭️ Skipping triggered group ${group.id} in remaining groups (will be added by trigger question)');
+          print(
+            '   ⏭️ Skipping triggered group ${group.id} in remaining groups (will be added by trigger question)',
+          );
           continue;
         }
 
         print('➕ Adding remaining Group ${group.id} (${group.name})');
-        regularWidgets.add(_buildQuestionGroup(
-          group, 
-          viewModel,
-          sourceQuestionToDirectQuestions: sourceQuestionToDirectQuestions,
-        ));
+        regularWidgets.add(
+          _buildQuestionGroup(
+            group,
+            viewModel,
+            sourceQuestionToDirectQuestions: sourceQuestionToDirectQuestions,
+          ),
+        );
         addedGroupIds.add(group.id);
-        
+
         // Check if any questions in this group have related direct questions
         for (var groupQuestion in group.questions) {
-          final relatedDirectQuestions = sourceQuestionToDirectQuestions[groupQuestion.id];
-          if (relatedDirectQuestions != null && relatedDirectQuestions.isNotEmpty) {
-            print('   🔗 Group ${group.id} question ${groupQuestion.id} has ${relatedDirectQuestions.length} related conditional questions');
+          final relatedDirectQuestions =
+              sourceQuestionToDirectQuestions[groupQuestion.id];
+          if (relatedDirectQuestions != null &&
+              relatedDirectQuestions.isNotEmpty) {
+            print(
+              '   🔗 Group ${group.id} question ${groupQuestion.id} has ${relatedDirectQuestions.length} related conditional questions',
+            );
             for (var relatedQuestion in relatedDirectQuestions) {
               final isVisible = viewModel.isQuestionVisible(relatedQuestion.id);
-              final alreadyAdded = addedQuestionIds.contains(relatedQuestion.id);
-              print('      🔍 Conditional Q${relatedQuestion.id}: visible=$isVisible, alreadyAdded=$alreadyAdded');
-              
+              final alreadyAdded = addedQuestionIds.contains(
+                relatedQuestion.id,
+              );
+              print(
+                '      🔍 Conditional Q${relatedQuestion.id}: visible=$isVisible, alreadyAdded=$alreadyAdded',
+              );
+
               if (!alreadyAdded && isVisible) {
-                print('         ✅ Adding conditional Q${relatedQuestion.id} after Group ${group.id} (triggered by Q${groupQuestion.id})');
-                regularWidgets.add(_buildDirectQuestion(relatedQuestion, viewModel));
+                print(
+                  '         ✅ Adding conditional Q${relatedQuestion.id} after Group ${group.id} (triggered by Q${groupQuestion.id})',
+                );
+                regularWidgets.add(
+                  _buildDirectQuestion(relatedQuestion, viewModel),
+                );
                 addedQuestionIds.add(relatedQuestion.id);
               } else if (alreadyAdded) {
                 print('         ⏭️ Already added, skipping');
@@ -1016,11 +1064,16 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                   }
 
                   // Check instance-specific visibility for conditional questions
-                  final isVisible = viewModel.isQuestionVisible(question.id, groupInstanceId: effectiveInstanceId);
+                  final isVisible = viewModel.isQuestionVisible(
+                    question.id,
+                    groupInstanceId: effectiveInstanceId,
+                  );
                   if (!isVisible) {
                     // Debug: why is this question hidden?
                     if (question.id == 30861) {
-                      print('🔍 DEBUG Q30861: effectiveInstanceId=$effectiveInstanceId, isVisible=$isVisible');
+                      print(
+                        '🔍 DEBUG Q30861: effectiveInstanceId=$effectiveInstanceId, isVisible=$isVisible',
+                      );
                     }
                     continue; // Skip hidden questions for this instance
                   }
@@ -1101,26 +1154,74 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                             viewModel,
                             parentInstanceId: instanceIndex,
                             triggerSourceQuestionId: question.id,
-                            sourceQuestionToDirectQuestions: sourceQuestionToDirectQuestions,
+                            sourceQuestionToDirectQuestions:
+                                sourceQuestionToDirectQuestions,
                           ),
                         );
                       }
                     }
                   }
-                  
+
                   // NEW: Check if this question (inside group) has related direct conditional questions
                   if (sourceQuestionToDirectQuestions != null) {
-                    final relatedDirectQuestions = sourceQuestionToDirectQuestions[question.id];
-                    if (relatedDirectQuestions != null && relatedDirectQuestions.isNotEmpty) {
-                      print('   🔗 [Inside Group ${group.id}] Q${question.id} has ${relatedDirectQuestions.length} related conditional questions');
+                    final relatedDirectQuestions =
+                        sourceQuestionToDirectQuestions[question.id];
+                    if (relatedDirectQuestions != null &&
+                        relatedDirectQuestions.isNotEmpty) {
+                      print(
+                        '   🔗 [Inside Group ${group.id}] Q${question.id} has ${relatedDirectQuestions.length} related conditional questions',
+                      );
                       for (var relatedQuestion in relatedDirectQuestions) {
-                        final isVisible = viewModel.isQuestionVisible(relatedQuestion.id);
+                        final isVisible = viewModel.isQuestionVisible(
+                          relatedQuestion.id,
+                        );
                         // Can't use addedQuestionIds here as it's not in scope
-                        print('      🔍 Conditional Q${relatedQuestion.id}: visible=$isVisible');
-                        
+                        print(
+                          '      🔍 Conditional Q${relatedQuestion.id}: visible=$isVisible',
+                        );
+
                         if (isVisible) {
-                          print('         ✅ Adding conditional Q${relatedQuestion.id} after Q${question.id} (inside Group ${group.id})');
-                          widgets.add(_buildDirectQuestion(relatedQuestion, viewModel));
+                          print(
+                            '         ✅ Adding conditional Q${relatedQuestion.id} after Q${question.id} (inside Group ${group.id})',
+                          );
+                          widgets.add(
+                            _buildDirectQuestion(relatedQuestion, viewModel),
+                          );
+
+                          // RECURSIVE CHECK: Check if THIS conditional question has its OWN conditional questions
+                          // This handles chains like Q40884 -> Q40897 -> Q40898
+                          final nestedConditionalQuestions =
+                              sourceQuestionToDirectQuestions[relatedQuestion
+                                  .id];
+                          if (nestedConditionalQuestions != null &&
+                              nestedConditionalQuestions.isNotEmpty) {
+                            print(
+                              '      🔗 [NESTED] Q${relatedQuestion.id} has ${nestedConditionalQuestions.length} nested conditional questions',
+                            );
+                            for (var nestedQuestion
+                                in nestedConditionalQuestions) {
+                              final nestedIsVisible = viewModel
+                                  .isQuestionVisible(nestedQuestion.id);
+                              print(
+                                '         🔍 Nested Conditional Q${nestedQuestion.id}: visible=$nestedIsVisible',
+                              );
+                              if (nestedIsVisible) {
+                                print(
+                                  '            ✅ Adding nested conditional Q${nestedQuestion.id} after Q${relatedQuestion.id}',
+                                );
+                                widgets.add(
+                                  _buildDirectQuestion(
+                                    nestedQuestion,
+                                    viewModel,
+                                  ),
+                                );
+                              } else {
+                                print(
+                                  '            ❌ Nested not visible, skipping',
+                                );
+                              }
+                            }
+                          }
                         } else {
                           print('         ❌ Not visible, skipping');
                         }
@@ -1176,7 +1277,10 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
       ) {
         for (final question in group.questions) {
           // Check instance-specific visibility
-          if (!viewModel.isQuestionVisible(question.id, groupInstanceId: instanceIndex)) {
+          if (!viewModel.isQuestionVisible(
+            question.id,
+            groupInstanceId: instanceIndex,
+          )) {
             print(
               '      ⏭️ Q${question.id} (${question.code}) [instance $instanceIndex]: HIDDEN - skipped',
             );
@@ -1342,7 +1446,9 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
       builder: (context) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           icon: const Icon(
             Icons.check_circle,
             color: Color(0xff25935F),
@@ -1380,7 +1486,10 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xff25935F),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
               ),
             ),
           ],
@@ -1416,7 +1525,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
       await viewModel.surveyRepository.saveSurveyAnswers(
         surveyAnswers: viewModel.surveyAnswers!,
       );
-      
+
       // Complete survey (saves to Excel and marks as done)
       await viewModel.completeSurvey();
 

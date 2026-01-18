@@ -606,6 +606,23 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       //print('🔍 Evaluating ${question.sourceConditions.length} conditions for question ${question.id} (${question.code}) [instance: $groupInstanceId]');
     }
 
+    // Special debug for Q40897 (Tobacco Type)
+    if (question.id == 40897) {
+      print('🚬 DEBUG Q40897: Evaluating conditions...');
+      final val = _getAnswerValue(
+        question.id,
+        groupInstanceId: groupInstanceId,
+      );
+      print('   Current value: $val (${val.runtimeType})');
+      for (final cond in question.sourceConditions) {
+        print(
+          '   - Condition: target=${cond.targetQuestionId}, value="${cond.value}"',
+        );
+        final met = _isConditionMet(val, cond);
+        print('   - Met? $met');
+      }
+    }
+
     // Special debug for questions 20906 and 20911 (الجنسية)
     if (question.id == 20906 || question.id == 20911) {
       //print('🌟 SPECIAL DEBUG Q${question.id} (${question.text})');
@@ -743,6 +760,11 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                 .firstOrNull;
             if (choice != null) {
               itemLabel = choice.label;
+            } else {
+              // If choice lookup fails (shouldn't happen if IDs are correct),
+              // try to find by code if we can access choices another way?
+              // For now, keep generic debug
+              //print('      ⚠️ Choice lookup failed for ID $item in Q${sourceQuestion.id}');
             }
           }
 
@@ -752,9 +774,29 @@ class SurveyDetailsViewModel extends ChangeNotifier {
           // i.e., if the selected list contains the value, condition is met
           if (condition.operatorEnum == ConditionOperator.equals) {
             if (itemLabel == condition.value ||
-                itemLabel.contains(condition.value)) {
+                itemLabel.contains(condition.value) ||
+                itemLabel.trim() == condition.value.trim() ||
+                itemLabel.contains(condition.value.trim())) {
               //print('      ✅ Match found! Condition met.');
               return true;
+            }
+
+            // Robust check for Q40897 "Other" (Tobacco Type)
+            // Handles different spellings of "Other" / "أخرى" / "اخري"
+            if (condition.sourceQuestionId == 40897) {
+              final checkVal = condition.value.toString();
+              if (checkVal.contains("اخري") ||
+                  checkVal.contains("أخرى") ||
+                  checkVal.contains("اخرى") ||
+                  checkVal.toLowerCase().contains("other")) {
+                if (itemLabel.contains("اخري") ||
+                    itemLabel.contains("أخرى") ||
+                    itemLabel.contains("اخرى") ||
+                    itemLabel.toLowerCase().contains("other")) {
+                  // print('🔧 ROBUST MATCH Q40897: Found "Other" variant match -> TRUE');
+                  return true;
+                }
+              }
             }
           }
         }
