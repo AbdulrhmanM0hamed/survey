@@ -48,6 +48,13 @@ class QuestionnaireRemoteDataSourceImpl
       }
       ////print('\n');
 
+      // Log governorate and area data
+      print('📍 Location Data being sent:');
+      print('   governorateId: ${questionnaireData['governorateId']}');
+      print('   areaId: ${questionnaireData['areaId']}');
+      print('   latitude: ${questionnaireData['latitude']}');
+      print('   longitude: ${questionnaireData['longitude']}');
+
       final response = await dio.post(
         '/Questionnaire/save',
         data: questionnaireData,
@@ -118,6 +125,10 @@ class QuestionnaireRemoteDataSourceImpl
     return {
       "surveyId": surveyAnswers.surveyId,
       "householdCode": surveyAnswers.surveyCode,
+      "governorateId": surveyAnswers.governorateId ?? 0,
+      "areaId": surveyAnswers.areaId ?? 0,
+      "supervisorId": surveyAnswers.supervisorId ?? 0,
+      "researcherId": surveyAnswers.researcherId?.toString() ?? "",
       "managementInformationIds": _extractManagementIds(surveyAnswers),
       "neighborhoodName": surveyAnswers.neighborhoodName ?? "",
       "streetName": surveyAnswers.streetName ?? "",
@@ -131,6 +142,12 @@ class QuestionnaireRemoteDataSourceImpl
           surveyAnswers.completedAt?.toIso8601String() ??
           DateTime.now().toIso8601String(),
       "status": surveyAnswers.isDraft ? "Draft" : "Completed",
+      "latitude": surveyAnswers.latitude ?? 0,
+      "longitude": surveyAnswers.longitude ?? 0,
+      "buildingFloorsCount": surveyAnswers.buildingFloorsCount ?? 0,
+      "apartmentsPerFloor": surveyAnswers.apartmentsPerFloor ?? 0,
+      "selectedFloor": surveyAnswers.selectedFloor ?? 0,
+      "selectedApartment": surveyAnswers.selectedApartment ?? 0,
       "answers": surveyAnswers.answers
           .map((answer) => _convertAnswer(answer))
           .toList(),

@@ -5,6 +5,7 @@ import 'package:survey/core/enums/condition_operator.dart';
 import 'package:survey/core/enums/target_type.dart';
 import 'package:survey/core/services/excel_export_service.dart';
 import 'package:survey/core/services/excel_export_service_syncfusion.dart';
+import 'package:survey/core/storage/hive_service.dart';
 import 'package:survey/data/datasources/remote/questionnaire_remote_datasource.dart';
 import 'package:survey/data/models/answer_model.dart';
 import 'package:survey/data/models/question_group_model.dart';
@@ -1748,8 +1749,23 @@ class SurveyDetailsViewModel extends ChangeNotifier {
 
       //print('📤 Found ${completedSurveys.length} completed surveys to upload');
 
-      // Initialize API datasource
-      final dio = Dio(BaseOptions(baseUrl: 'http://45.94.209.137:8080/api'));
+      // Initialize API datasource with auth token
+      final token = HiveService.getToken();
+      print(
+        '🔑 Token for upload: ${token != null ? "exists (${token.length} chars)" : "NOT FOUND!"}',
+      );
+
+      final dio = Dio(
+        BaseOptions(
+          baseUrl: 'http://45.94.209.137:8080/api',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            if (token != null && token.isNotEmpty)
+              'Authorization': 'Bearer $token',
+          },
+        ),
+      );
       final apiDataSource = QuestionnaireRemoteDataSourceImpl(dio: dio);
 
       int uploaded = 0;

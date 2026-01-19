@@ -339,11 +339,7 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        icon: const Icon(
-          Icons.logout,
-          color: Colors.red,
-          size: 48,
-        ),
+        icon: const Icon(Icons.logout, color: Colors.red, size: 48),
         title: const Text(
           'تسجيل الخروج',
           style: TextStyle(fontWeight: FontWeight.bold),
