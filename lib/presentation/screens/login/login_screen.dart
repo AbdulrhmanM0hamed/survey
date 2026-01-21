@@ -35,47 +35,38 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 40),
-                
-                // Logo/Icon
+
+                // Logo
                 Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: const Color(0xff25935F).withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.assignment_outlined,
-                    size: 80,
-                    color: Color(0xff25935F),
+                  padding: const EdgeInsets.all(16),
+                  child: Image.asset(
+                    'assets/HMF.png',
+                    height: 120,
+                    fit: BoxFit.contain,
                   ),
                 ),
-                
                 const SizedBox(height: 32),
-                
                 // Title
                 const Text(
                   'المسح الميداني ',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xff25935F),
+                    color: Color(0xffA93538),
                   ),
                   textAlign: TextAlign.center,
                 ),
-                
+
                 const SizedBox(height: 8),
-                
+
                 Text(
                   'تسجيل الدخول',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
                   textAlign: TextAlign.center,
                 ),
-                
+
                 const SizedBox(height: 48),
-                
+
                 // Username Field
                 TextFormField(
                   controller: _usernameController,
@@ -93,7 +84,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xff25935F), width: 2),
+                      borderSide: const BorderSide(
+                        color: Color(0xffA93538),
+                        width: 2,
+                      ),
                     ),
                     filled: true,
                     fillColor: Colors.white,
@@ -105,9 +99,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Password Field
                 Consumer<LoginViewModel>(
                   builder: (context, viewModel, child) {
@@ -136,7 +130,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xff25935F), width: 2),
+                          borderSide: const BorderSide(
+                            color: Color(0xffA93538),
+                            width: 2,
+                          ),
                         ),
                         filled: true,
                         fillColor: Colors.white,
@@ -150,13 +147,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     );
                   },
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Error Message
                 Consumer<LoginViewModel>(
                   builder: (context, viewModel, child) {
-                    if (viewModel.state == LoginState.error && viewModel.errorMessage != null) {
+                    if (viewModel.state == LoginState.error &&
+                        viewModel.errorMessage != null) {
                       return Container(
                         padding: const EdgeInsets.all(12),
                         margin: const EdgeInsets.only(bottom: 16),
@@ -167,7 +165,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.error_outline, color: Colors.red.shade700),
+                            Icon(
+                              Icons.error_outline,
+                              color: Colors.red.shade700,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -182,7 +183,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     return const SizedBox.shrink();
                   },
                 ),
-                
+
                 // Login Button
                 Consumer<LoginViewModel>(
                   builder: (context, viewModel, child) {
@@ -193,7 +194,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ? null
                             : () => _handleLogin(context),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xff25935F),
+                          backgroundColor: const Color(0xffA93538),
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -206,7 +207,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 height: 24,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
                                 ),
                               )
                             : const Text(
@@ -220,16 +223,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     );
                   },
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Footer
                 Text(
                   'جميع الحقوق محفوظة © 2025',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade500,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                   textAlign: TextAlign.center,
                 ),
               ],

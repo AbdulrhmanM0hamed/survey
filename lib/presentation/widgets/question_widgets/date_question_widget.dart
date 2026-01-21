@@ -41,7 +41,7 @@ class _DateQuestionWidgetState extends State<DateQuestionWidget> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xff25935F),
+              primary: Color(0xffA93538),
               onPrimary: Colors.white,
               onSurface: Colors.black,
             ),
@@ -116,7 +116,7 @@ class _DateQuestionWidgetState extends State<DateQuestionWidget> {
                 ),
                 Icon(
                   Icons.calendar_today,
-                  color: Color(0xff25935F),
+                  color: Color(0xffA93538),
                 ),
               ],
             ),
