@@ -1053,14 +1053,9 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                   if (hasRepetitionCondition) {
                     effectiveInstanceId = instanceIndex;
                   } else {
-                    effectiveInstanceId = parentInstanceId;
-                    if (triggerSourceQuestionId != null) {
-                      // Create a composite ID: (SourceID * 10000) + ParentInstanceID
-                      // This prevents collision when same group is triggered by different sources
-                      effectiveInstanceId =
-                          (triggerSourceQuestionId * 10000) +
-                          (effectiveInstanceId ?? 0);
-                    }
+                    // For conditional (non-repeating) groups, use parentInstanceId
+                    // Don't multiply by large numbers - keep instance IDs small
+                    effectiveInstanceId = parentInstanceId ?? 0;
                   }
 
                   // Check instance-specific visibility for conditional questions

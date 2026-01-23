@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:survey/core/enums/condition_action.dart';
@@ -1522,6 +1523,13 @@ class SurveyDetailsViewModel extends ChangeNotifier {
       (_) async {
         _surveyAnswers = completedAnswers;
 
+        // Print complete survey JSON
+        print('📋 ═══════════════════════════════════════════════════════════');
+        print('📋 SURVEY COMPLETED - FULL JSON DATA');
+        print('📋 ═══════════════════════════════════════════════════════════');
+        _printSurveyJson(completedAnswers);
+        print('📋 ═══════════════════════════════════════════════════════════');
+
         // Auto export to Excel
         try {
           final excelService = ExcelExportServiceSyncfusion();
@@ -1542,6 +1550,60 @@ class SurveyDetailsViewModel extends ChangeNotifier {
         _setState(SurveyDetailsState.loaded);
       },
     );
+  }
+
+  void _printSurveyJson(SurveyAnswersModel surveyAnswers) {
+    try {
+      // Convert to JSON
+      final jsonData = surveyAnswers.toJson();
+      
+      // Pretty print with indentation
+      const encoder = JsonEncoder.withIndent('  ');
+      final prettyJson = encoder.convert(jsonData);
+      
+      print('📄 Survey JSON:');
+      print(prettyJson);
+      
+      // Print summary
+      print('\n📊 Summary:');
+      print('   Survey ID: ${surveyAnswers.surveyId}');
+      print('   Survey Code: ${surveyAnswers.surveyCode}');
+      print('   Total Answers: ${surveyAnswers.answers.length}');
+      print('   Started At: ${surveyAnswers.startedAt}');
+      print('   Completed At: ${surveyAnswers.completedAt}');
+      print('   Is Draft: ${surveyAnswers.isDraft}');
+      print('   Researcher: ${surveyAnswers.researcherName} (ID: ${surveyAnswers.researcherId})');
+      print('   Supervisor: ${surveyAnswers.supervisorName} (ID: ${surveyAnswers.supervisorId})');
+      print('   City: ${surveyAnswers.cityName} (ID: ${surveyAnswers.cityId})');
+      print('   Governorate: ${surveyAnswers.governorateName} (ID: ${surveyAnswers.governorateId})');
+      print('   Area: ${surveyAnswers.areaName} (ID: ${surveyAnswers.areaId})');
+      print('   Neighborhood: ${surveyAnswers.neighborhoodName}');
+      print('   Street: ${surveyAnswers.streetName}');
+      print('   Location: (${surveyAnswers.latitude}, ${surveyAnswers.longitude})');
+      print('   Building: ${surveyAnswers.buildingFloorsCount} floors, ${surveyAnswers.apartmentsPerFloor} apartments/floor');
+      print('   Selected: Floor ${surveyAnswers.selectedFloor}, Apartment ${surveyAnswers.selectedApartment}');
+      
+      // Print answers by question
+      print('\n📝 Answers by Question:');
+      final answersByQuestion = <int, List<AnswerModel>>{};
+      for (final answer in surveyAnswers.answers) {
+        answersByQuestion.putIfAbsent(answer.questionId, () => []).add(answer);
+      }
+      
+      answersByQuestion.forEach((questionId, answers) {
+        print('   Question $questionId (${answers.first.questionCode}):');
+        for (final answer in answers) {
+          if (answer.groupInstanceId != null) {
+            print('      Instance ${answer.groupInstanceId}: ${answer.value}');
+          } else {
+            print('      Value: ${answer.value}');
+          }
+        }
+      });
+      
+    } catch (e) {
+      print('❌ Error printing survey JSON: $e');
+    }
   }
 
   void _setState(SurveyDetailsState newState) {
@@ -1721,6 +1783,132 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     }
   }
 
+  /// Fix repetition counts that exceed 20
+  Future<SurveyAnswersModel> _fixRepetitionCounts(SurveyAnswersModel surveyAnswers) async {
+    print('🔧 Checking for repetition count issues...');
+    
+    // Load the survey structure if not already loaded
+    if (_survey == null || _survey!.id != surveyAnswers.surveyId) {
+      print('📥 Loading survey structure for ID ${surveyAnswers.surveyId}...');
+      final result = await repository.getSurveyById(id: surveyAnswers.surveyId);
+      result.fold(
+        (failure) {
+          print('⚠️ Could not load survey structure: ${failure.message}');
+        },
+        (survey) {
+          _survey = survey;
+        },
+      );
+      
+      // If still null, return unchanged
+      if (_survey == null) {
+        return surveyAnswers;
+      }
+    }
+    
+    // Find questions that control repetition (have sourceConditions with Repetition action)
+    final repetitionControlQuestions = <int>[];
+    
+    if (_survey!.sections != null) {
+      for (final section in _survey!.sections!) {
+        // Check direct questions in section
+        for (final question in section.questions) {
+          final hasRepetitionCondition = question.sourceConditions.any(
+            (condition) => condition.action == 4, // ConditionAction.repetition
+          );
+          if (hasRepetitionCondition) {
+            repetitionControlQuestions.add(question.id);
+            print('📍 Found repetition control question: ${question.id} (${question.text})');
+          }
+        }
+        
+        // Check questions in groups
+        for (final group in section.questionGroups) {
+          for (final question in group.questions) {
+            final hasRepetitionCondition = question.sourceConditions.any(
+              (condition) => condition.action == 4, // ConditionAction.repetition
+            );
+            if (hasRepetitionCondition) {
+              repetitionControlQuestions.add(question.id);
+              print('📍 Found repetition control question: ${question.id} (${question.text})');
+            }
+          }
+        }
+      }
+    }
+    
+    // Check and fix repetition control question values
+    final fixedAnswers = <AnswerModel>[];
+    bool needsFix = false;
+    
+    for (final answer in surveyAnswers.answers) {
+      if (repetitionControlQuestions.contains(answer.questionId)) {
+        // This is a repetition control question
+        final value = answer.value;
+        int? intValue;
+        
+        if (value is int) {
+          intValue = value;
+        } else if (value is String) {
+          intValue = int.tryParse(value);
+        }
+        
+        if (intValue != null && intValue > 20) {
+          print('⚠️ Found repetition count > 20: Question ${answer.questionId} = $intValue');
+          print('🔧 Capping to 20...');
+          
+          // Cap the value at 20
+          fixedAnswers.add(answer.copyWith(value: 20));
+          needsFix = true;
+        } else {
+          fixedAnswers.add(answer);
+        }
+      } else {
+        // For non-repetition-control questions, validate groupInstanceId
+        // Only check if this answer belongs to a REPEATING group (not conditional groups)
+        if (answer.groupId != null && answer.groupInstanceId != null) {
+          // Find the group to check if it's a repeating group
+          QuestionGroupModel? group;
+          if (_survey!.sections != null) {
+            for (final section in _survey!.sections!) {
+              group = section.questionGroups.firstWhere(
+                (g) => g.id == answer.groupId,
+                orElse: () => section.questionGroups.first,
+              );
+              if (group.id == answer.groupId) break;
+            }
+          }
+          
+          // Check if this is a repeating group (has repetition condition)
+          final isRepeatingGroup = group?.targetConditions.any(
+            (c) => c.action == 4, // ConditionAction.repetition
+          ) ?? false;
+          
+          // Only validate instance ID for repeating groups
+          if (isRepeatingGroup && answer.groupInstanceId! > 20) {
+            print('🗑️ Removing answer for repeating group instance ${answer.groupInstanceId} (> 20)');
+            needsFix = true;
+            // Don't add this answer (skip it)
+          } else {
+            fixedAnswers.add(answer);
+          }
+        } else {
+          fixedAnswers.add(answer);
+        }
+      }
+    }
+    
+    if (needsFix) {
+      print('✅ Fixed repetition count issues');
+      print('⚠️ WARNING: Some answers were removed. Survey may have missing required questions.');
+      print('💡 TIP: User should edit the survey and reduce repetition count to 20 or less, then re-answer.');
+      return surveyAnswers.copyWith(answers: fixedAnswers);
+    } else {
+      print('✅ No repetition count issues found');
+      return surveyAnswers;
+    }
+  }
+
   /// Upload all completed surveys to API
   Future<Map<String, dynamic>> uploadCompletedSurveys() async {
     try {
@@ -1781,10 +1969,30 @@ class SurveyDetailsViewModel extends ChangeNotifier {
             '📤 Uploading survey ${i + 1}/${completedSurveys.length}: Survey ID ${surveyAnswers.surveyId}',
           );
 
+          // Print survey JSON before upload
+          print('📋 ═══════════════════════════════════════════════════════════');
+          print('📋 SURVEY TO BE UPLOADED - FULL JSON DATA');
+          print('📋 Survey ${i + 1}/${completedSurveys.length}');
+          print('📋 ═══════════════════════════════════════════════════════════');
+          _printSurveyJson(surveyAnswers);
+          print('📋 ═══════════════════════════════════════════════════════════');
+
+          // Fix repetition counts before uploading
+          final fixedSurveyAnswers = await _fixRepetitionCounts(surveyAnswers);
+
           // Convert to API format
           final apiData = QuestionnaireRemoteDataSourceImpl.convertToApiFormat(
-            surveyAnswers,
+            fixedSurveyAnswers,
           );
+
+          // Print API payload
+          print('📤 ═══════════════════════════════════════════════════════════');
+          print('📤 API PAYLOAD TO BE SENT');
+          print('📤 ═══════════════════════════════════════════════════════════');
+          const encoder = JsonEncoder.withIndent('  ');
+          final prettyApiData = encoder.convert(apiData);
+          print(prettyApiData);
+          print('📤 ═══════════════════════════════════════════════════════════');
 
           // Submit to API
           final response = await apiDataSource.submitQuestionnaire(apiData);
@@ -1797,9 +2005,31 @@ class SurveyDetailsViewModel extends ChangeNotifier {
           // Check if upload was successful
           bool isSuccess = false;
           if (response is Map) {
-            // Check for error code
             final errorCode = response['errorCode'];
-            isSuccess = errorCode == null || errorCode == 0;
+            final errorMessage = response['errorMessage'];
+            
+            // Success conditions:
+            // 1. errorCode is null (no error), OR
+            // 2. errorCode is 0 AND errorMessage contains "success" (case-insensitive), OR
+            // 3. errorCode is 0 AND errorMessage is null/empty
+            if (errorCode == null) {
+              isSuccess = true;
+            } else if (errorCode == 0) {
+              if (errorMessage == null || 
+                  (errorMessage is String && errorMessage.trim().isEmpty)) {
+                isSuccess = true;
+              } else if (errorMessage is String && 
+                         errorMessage.toLowerCase().contains('success')) {
+                // errorCode = 0 with "success" message means SUCCESS
+                isSuccess = true;
+              } else {
+                // errorCode = 0 with other message means validation error (FAILED)
+                isSuccess = false;
+              }
+            } else {
+              // errorCode != 0 means error (FAILED)
+              isSuccess = false;
+            }
           } else {
             // If response is not a map, consider it successful
             isSuccess = response != null;
@@ -1820,7 +2050,8 @@ class SurveyDetailsViewModel extends ChangeNotifier {
                 ? response['errorMessage'] ?? 'Unknown error'
                 : 'Upload failed';
             failedSurveys.add('Survey ${surveyAnswers.surveyId}: $errorMsg');
-            print('⚠️ Survey ${i + 1} upload failed: $errorMsg');
+            print('❌ Survey ${i + 1} upload failed: $errorMsg');
+            print('💾 Survey kept in local storage for retry');
           }
 
           // Small delay between uploads

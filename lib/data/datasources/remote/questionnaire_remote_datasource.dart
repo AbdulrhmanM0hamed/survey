@@ -127,7 +127,7 @@ class QuestionnaireRemoteDataSourceImpl
       "householdCode": surveyAnswers.surveyCode,
       "governorateId": surveyAnswers.governorateId ?? 0,
       "areaId": surveyAnswers.areaId ?? 0,
-      "supervisorId": surveyAnswers.supervisorId ?? 0,
+      "supervisorId": surveyAnswers.supervisorId, // Send null if not set, not 0
       "researcherId": surveyAnswers.researcherId?.toString() ?? "",
       "managementInformationIds": _extractManagementIds(surveyAnswers),
       "neighborhoodName": surveyAnswers.neighborhoodName ?? "",
