@@ -1436,6 +1436,217 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
     BuildContext context,
     SurveyDetailsViewModel viewModel,
   ) async {
+    // Skip validation - allow early completion with missing answers
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          icon: const Icon(
+            Icons.check_circle,
+            color: Color(0xffA93538),
+            size: 48,
+          ),
+          title: const Text(
+            'إنهاء الاستبيان الآن',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'هل تريد إنهاء الاستبيان في هذه المرحلة؟',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'سيتم حفظ جميع الإجابات التي تم إدخالها حتى الآن وتصديرها إلى Excel.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.pop(context, true),
+              icon: const Icon(Icons.check),
+              label: const Text('إنهاء الآن'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xffA93538),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    // Show processing dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('جاري حفظ الاستبيان...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      // Save current answers to Hive
+      await viewModel.surveyRepository.saveSurveyAnswers(
+        surveyAnswers: viewModel.surveyAnswers!,
+      );
+
+      // Complete survey (saves to Excel and marks as done)
+      // Early finish: status=0 (incomplete)
+      await viewModel.completeSurvey(completionStatus: 0);
+
+      if (!context.mounted) return;
+      Navigator.pop(context); // Close processing dialog
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ تم إنهاء الاستبيان وحفظه بنجاح'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+        ),
+      );
+
+      // Go back to home/previous screen
+      Navigator.pop(context);
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.pop(context); // Close processing dialog
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('حدث خطأ أثناء الحفظ: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  /// Validate that all visible required questions are answered
+  Map<String, dynamic> _validateRequiredQuestions(
+    SurveyDetailsViewModel viewModel,
+  ) {
+    final missingQuestions = <Map<String, dynamic>>[];
+    
+    if (viewModel.survey?.sections == null) {
+      return {'isValid': true, 'missingQuestions': []};
+    }
+
+    for (final section in viewModel.survey!.sections!) {
+      // Check direct questions in section
+      for (final question in section.questions) {
+        if (viewModel.isQuestionRequired(question.id) &&
+            viewModel.isQuestionVisible(question.id)) {
+          final answer = viewModel.surveyAnswers?.answers.firstWhere(
+            (a) => a.questionId == question.id && a.groupInstanceId == null,
+            orElse: () => AnswerModel(
+              questionId: question.id,
+              questionCode: question.code,
+              value: null,
+              timestamp: DateTime.now(),
+            ),
+          );
+          
+          if (answer?.value == null) {
+            missingQuestions.add({
+              'id': question.id,
+              'text': question.text,
+              'section': section.name,
+            });
+          }
+        }
+      }
+
+      // Check questions in groups
+      for (final group in section.questionGroups) {
+        if (!viewModel.isGroupVisible(group.id)) continue;
+        
+        final repetitions = viewModel.getGroupRepetitions(group.id);
+        
+        for (int instanceIndex = 0; instanceIndex < repetitions; instanceIndex++) {
+          for (final question in group.questions) {
+            // Determine effective instance ID (same logic as in UI)
+            final hasRepetitionCondition = group.targetConditions.any(
+              (c) => c.actionEnum == ConditionAction.repetition,
+            );
+            
+            final effectiveInstanceId = hasRepetitionCondition ? instanceIndex : 0;
+            
+            if (viewModel.isQuestionRequired(question.id) &&
+                viewModel.isQuestionVisible(
+                  question.id,
+                  groupInstanceId: effectiveInstanceId,
+                )) {
+              final answer = viewModel.surveyAnswers?.answers.firstWhere(
+                (a) =>
+                    a.questionId == question.id &&
+                    a.groupInstanceId == effectiveInstanceId,
+                orElse: () => AnswerModel(
+                  questionId: question.id,
+                  questionCode: question.code,
+                  value: null,
+                  timestamp: DateTime.now(),
+                ),
+              );
+              
+              if (answer?.value == null) {
+                missingQuestions.add({
+                  'id': question.id,
+                  'text': repetitions > 1
+                      ? '${question.text} (التكرار ${instanceIndex + 1})'
+                      : question.text,
+                  'section': section.name,
+                  'group': group.name,
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return {
+      'isValid': missingQuestions.isEmpty,
+      'missingQuestions': missingQuestions,
+    };
+  }
+
+  Future<void> _showEarlyCompletionDialog_OLD(
+    BuildContext context,
+    SurveyDetailsViewModel viewModel,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => Directionality(

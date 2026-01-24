@@ -141,7 +141,8 @@ class QuestionnaireRemoteDataSourceImpl
       "endAt":
           surveyAnswers.completedAt?.toIso8601String() ??
           DateTime.now().toIso8601String(),
-      "status": surveyAnswers.isDraft ? "Draft" : "Completed",
+    //  "status": surveyAnswers.isDraft ? "Draft" : "Completed",
+      "status": surveyAnswers.completionStatus, // 0 = incomplete, 1 = complete
       "latitude": surveyAnswers.latitude ?? 0,
       "longitude": surveyAnswers.longitude ?? 0,
       "buildingFloorsCount": surveyAnswers.buildingFloorsCount ?? 0,

@@ -174,6 +174,9 @@ class SurveyAnswersModel extends Equatable {
   @HiveField(25)
   final String? areaName;
 
+  @HiveField(26)
+  final int completionStatus; // 0 = incomplete (early finish), 1 = complete (all required answered)
+
   const SurveyAnswersModel({
     required this.surveyId,
     required this.surveyCode,
@@ -201,6 +204,7 @@ class SurveyAnswersModel extends Equatable {
     this.areaId,
     this.governorateName,
     this.areaName,
+    this.completionStatus = 1, // Default to complete
   });
 
   factory SurveyAnswersModel.fromJson(Map<String, dynamic> json) {
@@ -239,6 +243,7 @@ class SurveyAnswersModel extends Equatable {
       areaId: json['areaId'],
       governorateName: json['governorateName'],
       areaName: json['areaName'],
+      completionStatus: json['status'] ?? 1, // Default to complete
     );
   }
 
@@ -270,6 +275,7 @@ class SurveyAnswersModel extends Equatable {
       'areaId': areaId,
       'governorateName': governorateName,
       'areaName': areaName,
+      'status': completionStatus,
     };
   }
 
@@ -300,6 +306,7 @@ class SurveyAnswersModel extends Equatable {
     int? areaId,
     String? governorateName,
     String? areaName,
+    int? completionStatus,
   }) {
     return SurveyAnswersModel(
       surveyId: surveyId ?? this.surveyId,
@@ -328,6 +335,7 @@ class SurveyAnswersModel extends Equatable {
       areaId: areaId ?? this.areaId,
       governorateName: governorateName ?? this.governorateName,
       areaName: areaName ?? this.areaName,
+      completionStatus: completionStatus ?? this.completionStatus,
     );
   }
 
@@ -359,5 +367,6 @@ class SurveyAnswersModel extends Equatable {
     areaId,
     governorateName,
     areaName,
+    completionStatus,
   ];
 }

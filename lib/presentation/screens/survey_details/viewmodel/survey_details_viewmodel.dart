@@ -1500,7 +1500,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     );
   }
 
-  Future<void> completeSurvey() async {
+  Future<void> completeSurvey({int completionStatus = 1}) async {
     if (_surveyAnswers == null) return;
 
     _setState(SurveyDetailsState.saving);
@@ -1508,6 +1508,7 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     final completedAnswers = _surveyAnswers!.copyWith(
       completedAt: DateTime.now(),
       isDraft: false,
+      completionStatus: completionStatus, // 0 = incomplete, 1 = complete
     );
 
     // Save as completed (with unique key including timestamp)
@@ -1909,6 +1910,149 @@ class SurveyDetailsViewModel extends ChangeNotifier {
     }
   }
 
+  /// Fill missing required questions with empty values
+  Future<SurveyAnswersModel> _fillMissingRequiredQuestions(
+    SurveyAnswersModel surveyAnswers,
+  ) async {
+    // Skip auto-fill for complete surveys (completionStatus = 1)
+    if (surveyAnswers.completionStatus == 1) {
+      print('✅ Survey is complete (status=1), skipping auto-fill');
+      return surveyAnswers;
+    }
+    
+    print('🔧 Filling missing required questions with default values (status=0)...');
+    
+    // Load the survey structure if not already loaded
+    if (_survey == null || _survey!.id != surveyAnswers.surveyId) {
+      print('📥 Loading survey structure for ID ${surveyAnswers.surveyId}...');
+      final result = await repository.getSurveyById(id: surveyAnswers.surveyId);
+      result.fold(
+        (failure) {
+          print('⚠️ Could not load survey structure: ${failure.message}');
+        },
+        (survey) {
+          _survey = survey;
+        },
+      );
+      
+      if (_survey == null) {
+        print('⚠️ Survey structure not available, skipping auto-fill');
+        return surveyAnswers;
+      }
+    }
+    
+    final filledAnswers = List<AnswerModel>.from(surveyAnswers.answers);
+    int addedCount = 0;
+    
+    if (_survey!.sections != null) {
+      for (final section in _survey!.sections!) {
+        // Check direct questions in section
+        for (final question in section.questions) {
+          if (question.isRequired) {
+            // Check if answer exists
+            final hasAnswer = filledAnswers.any(
+              (a) => a.questionId == question.id && a.groupInstanceId == null,
+            );
+            
+            if (!hasAnswer) {
+              // Add empty answer based on question type
+              dynamic emptyValue = _getEmptyValueForQuestionType(question.type);
+              
+              // For SingleChoice, get first available choice
+              if (question.type == 4 && question.choices.isNotEmpty) {
+                emptyValue = question.choices.first.id;
+              }
+              
+              filledAnswers.add(
+                AnswerModel(
+                  questionId: question.id,
+                  questionCode: question.code,
+                  value: emptyValue,
+                  timestamp: DateTime.now(),
+                  groupInstanceId: null,
+                  questionType: question.type,
+                  groupId: null,
+                ),
+              );
+              addedCount++;
+              print('➕ Added empty answer for Q${question.id} (${question.code}): $emptyValue');
+            }
+          }
+        }
+        
+        // Check questions in groups
+        for (final group in section.questionGroups) {
+          // For groups, we need to check visible instances
+          // For simplicity, we'll add for instance 0 only
+          for (final question in group.questions) {
+            if (question.isRequired) {
+              // Check if answer exists for instance 0
+              final hasAnswer = filledAnswers.any(
+                (a) => a.questionId == question.id && a.groupInstanceId == 0,
+              );
+              
+              if (!hasAnswer) {
+                // Add empty answer
+                dynamic emptyValue = _getEmptyValueForQuestionType(question.type);
+                
+                // For SingleChoice, get first available choice
+                if (question.type == 4 && question.choices.isNotEmpty) {
+                  emptyValue = question.choices.first.id;
+                }
+                
+                filledAnswers.add(
+                  AnswerModel(
+                    questionId: question.id,
+                    questionCode: question.code,
+                    value: emptyValue,
+                    timestamp: DateTime.now(),
+                    groupInstanceId: 0,
+                    questionType: question.type,
+                    groupId: group.id,
+                  ),
+                );
+                addedCount++;
+                print('➕ Added empty answer for Q${question.id} (${question.code}) in group ${group.id}: $emptyValue');
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    if (addedCount > 0) {
+      print('✅ Added $addedCount empty answers for missing required questions');
+      return surveyAnswers.copyWith(answers: filledAnswers);
+    } else {
+      print('✅ No missing required questions found');
+      return surveyAnswers;
+    }
+  }
+  
+  /// Get empty value based on question type
+  dynamic _getEmptyValueForQuestionType(int questionType) {
+    switch (questionType) {
+      case 0: // Text
+        return "غير متوفر"; // Server requires non-empty text
+      case 1: // Number
+        return 0; // Default number
+      case 2: // Date
+        return DateTime.now().toIso8601String(); // Current date
+      case 3: // Image
+        return ""; // Empty image (optional usually)
+      case 4: // SingleChoice - will need to get first choice ID
+        return null; // Will be handled separately
+      case 5: // Multiple Choice
+        return []; // Empty array
+      case 6: // Yes/No
+        return false; // Default to "No"
+      case 7: // Rating
+        return 1.0; // Default rating
+      default:
+        return "";
+    }
+  }
+
   /// Upload all completed surveys to API
   Future<Map<String, dynamic>> uploadCompletedSurveys() async {
     try {
@@ -1978,7 +2122,10 @@ class SurveyDetailsViewModel extends ChangeNotifier {
           print('📋 ═══════════════════════════════════════════════════════════');
 
           // Fix repetition counts before uploading
-          final fixedSurveyAnswers = await _fixRepetitionCounts(surveyAnswers);
+          var fixedSurveyAnswers = await _fixRepetitionCounts(surveyAnswers);
+          
+          // Fill missing required questions with empty values
+          fixedSurveyAnswers = await _fillMissingRequiredQuestions(fixedSurveyAnswers);
 
           // Convert to API format
           final apiData = QuestionnaireRemoteDataSourceImpl.convertToApiFormat(
