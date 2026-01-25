@@ -86,7 +86,7 @@ class _TasksScreenState extends State<TasksScreen> {
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xffA93538),
+                backgroundColor: const Color(0xff25935F),
                 foregroundColor: Colors.white,
               ),
               child: const Text('تأكيد'),
@@ -119,7 +119,7 @@ class _TasksScreenState extends State<TasksScreen> {
         appBar: AppBar(
           title: const Text('المواقع'),
           centerTitle: true, 
-          backgroundColor: const Color(0xffA93538),
+          backgroundColor: const Color(0xff25935F),
           foregroundColor: Colors.white,
           actions: [
             Consumer<TasksViewModel>(
@@ -204,7 +204,7 @@ class _TasksScreenState extends State<TasksScreen> {
                         icon: const Icon(Icons.refresh),
                         label: const Text('إعادة المحاولة'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xffA93538),
+                          backgroundColor: const Color(0xff25935F),
                           foregroundColor: Colors.white,
                         ),
                       ),
@@ -334,12 +334,12 @@ class _TaskCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: task.isDone
                         ? Colors.green.withValues(alpha: 0.1)
-                        : const Color(0xffA93538).withValues(alpha: 0.1),
+                        : const Color(0xff25935F).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     task.isDone ? Icons.check_circle : Icons.location_on,
-                    color: task.isDone ? Colors.green : const Color(0xffA93538),
+                    color: task.isDone ? Colors.green : const Color(0xff25935F),
                     size: 28,
                   ),
                 ),
@@ -440,8 +440,8 @@ class _TaskCard extends StatelessWidget {
                     icon: const Icon(Icons.map),
                     label: const Text('فتح في الخريطة'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xffA93538),
-                      side: const BorderSide(color: Color(0xffA93538)),
+                      foregroundColor: const Color(0xff25935F),
+                      side: const BorderSide(color: Color(0xff25935F)),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
                   ),
@@ -462,7 +462,7 @@ class _TaskCard extends StatelessWidget {
                         : Icon(task.isDone ? Icons.check : Icons.check_circle_outline),
                     label: Text(task.isDone ? 'تمت' : 'تأكيد الزيارة'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: task.isDone ? Colors.grey : const Color(0xffA93538),
+                      backgroundColor: task.isDone ? Colors.grey : const Color(0xff25935F),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),

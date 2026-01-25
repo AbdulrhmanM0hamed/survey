@@ -113,7 +113,7 @@ class _TextQuestionWidgetState extends State<TextQuestionWidget> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xffA93538), width: 2),
+              borderSide: const BorderSide(color: Color(0xff25935F), width: 2),
             ),
             filled: true,
             fillColor: Colors.grey.shade50,

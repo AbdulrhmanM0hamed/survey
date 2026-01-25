@@ -112,11 +112,11 @@ class _ChoiceQuestionWidgetState extends State<ChoiceQuestionWidget> {
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
           border: Border.all(
-            color: isSelected ? Color(0xffA93538) : Colors.grey.shade300,
+            color: isSelected ? Color(0xff25935F) : Colors.grey.shade300,
             width: isSelected ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(12),
-          color: isSelected ? Color(0xffA93538).withValues(alpha: 0.05) : Colors.white,
+          color: isSelected ? Color(0xff25935F).withValues(alpha: 0.05) : Colors.white,
         ),
         child: CheckboxListTile(
           value: isSelected,
@@ -139,7 +139,7 @@ class _ChoiceQuestionWidgetState extends State<ChoiceQuestionWidget> {
             });
           },
           controlAffinity: ListTileControlAffinity.leading,
-          activeColor: Color(0xffA93538),
+          activeColor: Color(0xff25935F),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -152,11 +152,11 @@ class _ChoiceQuestionWidgetState extends State<ChoiceQuestionWidget> {
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
           border: Border.all(
-            color: isSelected ? Color(0xffA93538) : Colors.grey.shade300,
+            color: isSelected ? Color(0xff25935F) : Colors.grey.shade300,
             width: isSelected ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(12),
-          color: isSelected ? Color(0xffA93538).withValues(alpha: 0.05) : Colors.white,
+          color: isSelected ? Color(0xff25935F).withValues(alpha: 0.05) : Colors.white,
         ),
         child: RadioListTile<int>(
           value: choice.id,
@@ -174,7 +174,7 @@ class _ChoiceQuestionWidgetState extends State<ChoiceQuestionWidget> {
             });
           },
           controlAffinity: ListTileControlAffinity.leading,
-          activeColor: Color(0xffA93538),
+          activeColor: Color(0xff25935F),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

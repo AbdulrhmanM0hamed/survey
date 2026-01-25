@@ -30,7 +30,7 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: const Color(0xffA93538),
+        backgroundColor: const Color(0xff25935F),
         title: const Text(
           'الرئيسية',
           style: TextStyle(
@@ -61,7 +61,7 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xffA93538),
+                      color: Color(0xff25935F),
                     ),
                   ),
                 ),
@@ -147,14 +147,14 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xffA93538), Color(0xffA93538)],
+          colors: [Color(0xff25935F), Color(0xff25935F)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xffA93538).withValues(alpha: 0.4),
+            color: const Color(0xff25935F).withValues(alpha: 0.4),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -377,7 +377,7 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         icon: const Icon(
           Icons.cloud_upload,
-          color: Color(0xffA93538),
+          color: Color(0xff25935F),
           size: 48,
         ),
         title: const Text(
@@ -396,7 +396,7 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xffA93538),
+              backgroundColor: const Color(0xff25935F),
               foregroundColor: Colors.white,
             ),
             child: const Text('رفع'),
@@ -493,7 +493,7 @@ class _SurveysListScreenState extends State<SurveysListScreen> {
               ElevatedButton(
                 onPressed: () => Navigator.pop(context),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xffA93538),
+                  backgroundColor: const Color(0xff25935F),
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('حسناً'),
@@ -565,7 +565,7 @@ class _SurveysListPage extends StatelessWidget {
                             icon: const Icon(Icons.refresh),
                             label: const Text('إعادة المحاولة'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xffA93538),
+                              backgroundColor: const Color(0xff25935F),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 24,
@@ -652,7 +652,7 @@ class _SurveysListPage extends StatelessWidget {
         right: 16,
       ),
       decoration: const BoxDecoration(
-        color: Color(0xffA93538),
+        color: Color(0xff25935F),
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(30),
           bottomRight: Radius.circular(30),
@@ -717,7 +717,7 @@ class _SurveyCard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [const Color(0xffA93538).withOpacity(0.15), Colors.white],
+          colors: [const Color(0xff25935F).withOpacity(0.15), Colors.white],
           stops: const [0.0, 0.4],
         ),
         boxShadow: [
@@ -752,12 +752,12 @@ class _SurveyCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xffA93538).withOpacity(0.2),
+                        color: const Color(0xff25935F).withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
                         Icons.assignment,
-                        color: Color(0xffA93538),
+                        color: Color(0xff25935F),
                         size: 24,
                       ),
                     ),
@@ -826,7 +826,7 @@ class _SurveyCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: const BoxDecoration(
-                color: Color(0xffA93538),
+                color: Color(0xff25935F),
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(20),
                   bottomRight: Radius.circular(20),

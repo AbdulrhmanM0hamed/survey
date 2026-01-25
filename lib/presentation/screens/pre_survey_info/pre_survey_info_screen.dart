@@ -251,7 +251,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
         appBar: AppBar(
           title: const Text('معلومات ما قبل الاستبيان'),
           centerTitle: true,
-          backgroundColor: const Color(0xffA93538),
+          backgroundColor: const Color(0xff25935F),
           foregroundColor: Colors.white,
         ),
         body: Form(
@@ -261,7 +261,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
             children: [
               // Header
               const Card(
-                color: Color(0xffA93538),
+                color: Color(0xff25935F),
                 child: Padding(
                   padding: EdgeInsets.all(16.0),
                   child: Column(
@@ -363,7 +363,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xffA93538), Color(0xffA93538)],
+                    colors: [Color(0xff25935F), Color(0xff25935F)],
                     begin: Alignment.topRight,
                     end: Alignment.bottomLeft,
                   ),
@@ -450,7 +450,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
               ElevatedButton(
                 onPressed: _continue,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xffA93538),
+                  backgroundColor: const Color(0xff25935F),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -506,10 +506,10 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xffA93538).withValues(alpha: 0.1),
+                    color: const Color(0xff25935F).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: const Color(0xffA93538), size: 24),
+                  child: Icon(icon, color: const Color(0xff25935F), size: 24),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -580,13 +580,13 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                       decoration: BoxDecoration(
                         border: Border.all(
                           color: isSelected 
-                              ? const Color(0xffA93538) 
+                              ? const Color(0xff25935F) 
                               : Colors.grey.shade300,
                           width: isSelected ? 2 : 1,
                         ),
                         borderRadius: BorderRadius.circular(8),
                         color: isSelected 
-                            ? const Color(0xffA93538).withValues(alpha: 0.1)
+                            ? const Color(0xff25935F).withValues(alpha: 0.1)
                             : Colors.transparent,
                       ),
                       child: Row(
@@ -599,7 +599,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                                 fontSize: 14,
                                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                                 color: isSelected 
-                                    ? const Color(0xffA93538)
+                                    ? const Color(0xff25935F)
                                     : Colors.black87,
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -613,12 +613,12 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                               shape: BoxShape.circle,
                               border: Border.all(
                                 color: isSelected 
-                                    ? const Color(0xffA93538)
+                                    ? const Color(0xff25935F)
                                     : Colors.grey.shade400,
                                 width: 2,
                               ),
                               color: isSelected 
-                                  ? const Color(0xffA93538)
+                                  ? const Color(0xff25935F)
                                   : Colors.transparent,
                             ),
                             child: isSelected
@@ -686,10 +686,10 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xffA93538).withValues(alpha: 0.1),
+                    color: const Color(0xff25935F).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: const Color(0xffA93538), size: 24),
+                  child: Icon(icon, color: const Color(0xff25935F), size: 24),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -741,7 +741,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: const BorderSide(
-                    color: Color(0xffA93538),
+                    color: Color(0xff25935F),
                     width: 2,
                   ),
                 ),
@@ -784,10 +784,10 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xffA93538).withValues(alpha: 0.1),
+                    color: const Color(0xff25935F).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(icon, color: const Color(0xffA93538), size: 24),
+                  child: Icon(icon, color: const Color(0xff25935F), size: 24),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -822,7 +822,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: const BorderSide(
-                    color: Color(0xffA93538),
+                    color: Color(0xff25935F),
                     width: 2,
                   ),
                 ),
@@ -845,10 +845,10 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                   horizontal: 16,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xffA93538).withValues(alpha: 0.1),
+                  color: const Color(0xff25935F).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: const Color(0xffA93538).withValues(alpha: 0.3),
+                    color: const Color(0xff25935F).withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
@@ -859,7 +859,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xffA93538),
+                        color: Color(0xff25935F),
                       ),
                     ),
                     Text(
@@ -867,7 +867,7 @@ class _PreSurveyInfoScreenState extends State<PreSurveyInfoScreen> {
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xffA93538),
+                        color: Color(0xff25935F),
                       ),
                     ),
                   ],

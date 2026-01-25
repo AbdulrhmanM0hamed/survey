@@ -136,7 +136,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
         backgroundColor: Colors.grey.shade100,
         appBar: AppBar(
           elevation: 0,
-          backgroundColor: Color(0xffA93538),
+          backgroundColor: Color(0xff25935F),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () {
@@ -238,7 +238,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                     //   value: 'export_clear',
                     //   child: Row(
                     //     children: [
-                    //       Icon(Icons.cloud_upload, color: Color(0xffA93538)),
+                    //       Icon(Icons.cloud_upload, color: Color(0xff25935F)),
                     //       SizedBox(width: 12),
                     //       Text('تصدير وحذف البيانات'),
                     //     ],
@@ -285,7 +285,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                         icon: const Icon(Icons.refresh),
                         label: const Text('إعادة المحاولة'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xffA93538),
+                          backgroundColor: Color(0xff25935F),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 24,
@@ -315,7 +315,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Color(0xffA93538),
+                    color: Color(0xff25935F),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.grey.shade300,
@@ -458,7 +458,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                             });
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xffA93538),
+                            backgroundColor: Color(0xff25935F),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
@@ -735,8 +735,8 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Color(0xffA93538).withValues(alpha: 0.7),
-                    Color(0xffA93538).withValues(alpha: 0.5),
+                    Color(0xff25935F).withValues(alpha: 0.7),
+                    Color(0xff25935F).withValues(alpha: 0.5),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -744,7 +744,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Color(0xffA93538).withValues(alpha: 0.2),
+                    color: Color(0xff25935F).withValues(alpha: 0.2),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -972,16 +972,16 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           //   padding: const EdgeInsets.all(16),
           //   margin: const EdgeInsets.only(bottom: 12),
           //   decoration: BoxDecoration(
-          //     color: Color(0xffA93538).withValues(alpha: 0.05),
+          //     color: Color(0xff25935F).withValues(alpha: 0.05),
           //     borderRadius: BorderRadius.circular(12),
-          //     border: Border.all(color: Color(0xffA93538).withValues(alpha: 0.2)),
+          //     border: Border.all(color: Color(0xff25935F).withValues(alpha: 0.2)),
           //   ),
           //   child: Column(
           //     crossAxisAlignment: CrossAxisAlignment.start,
           //     children: [
           //       Row(
           //         children: [
-          //           Icon(Icons.group_work, color: Color(0xffA93538).withValues(alpha: 0.7)),
+          //           Icon(Icons.group_work, color: Color(0xff25935F).withValues(alpha: 0.7)),
           //           const SizedBox(width: 12),
           //           Expanded(
           //             child: Text(
@@ -989,7 +989,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           //               style: TextStyle(
           //                 fontSize: 18,
           //                 fontWeight: FontWeight.w600,
-          //                 color: Color(0xffA93538).withValues(alpha: 0.9),
+          //                 color: Color(0xff25935F).withValues(alpha: 0.9),
           //               ),
           //             ),
           //           ),
@@ -1419,7 +1419,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xffA93538),
+              backgroundColor: Color(0xff25935F),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -1447,7 +1447,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           ),
           icon: const Icon(
             Icons.check_circle,
-            color: Color(0xffA93538),
+            color: Color(0xff25935F),
             size: 48,
           ),
           title: const Text(
@@ -1480,7 +1480,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
               icon: const Icon(Icons.check),
               label: const Text('إنهاء الآن'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xffA93538),
+                backgroundColor: const Color(0xff25935F),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
@@ -1657,7 +1657,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
           ),
           icon: const Icon(
             Icons.check_circle,
-            color: Color(0xffA93538),
+            color: Color(0xff25935F),
             size: 48,
           ),
           title: const Text(
@@ -1690,7 +1690,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
               icon: const Icon(Icons.check),
               label: const Text('إنهاء الآن'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xffA93538),
+                backgroundColor: const Color(0xff25935F),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
@@ -2026,7 +2026,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
                           icon: const Icon(Icons.share),
                           label: const Text('مشاركة'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xffA93538),
+                            backgroundColor: Color(0xff25935F),
                             foregroundColor: Colors.white,
                           ),
                         ),
@@ -2165,7 +2165,7 @@ class _SurveyDetailsScreenState extends State<SurveyDetailsScreen> {
             icon: const Icon(Icons.share),
             label: const Text('مشاركة'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xffA93538),
+              backgroundColor: Color(0xff25935F),
               foregroundColor: Colors.white,
             ),
           ),
@@ -2204,10 +2204,10 @@ class _RatingHeaderDelegate extends SliverPersistentHeaderDelegate {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xffA93538).withValues(alpha: 0.1),
+          color: const Color(0xff25935F).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: const Color(0xffA93538).withValues(alpha: 0.3),
+            color: const Color(0xff25935F).withValues(alpha: 0.3),
           ),
         ),
         child: Column(
@@ -2216,14 +2216,14 @@ class _RatingHeaderDelegate extends SliverPersistentHeaderDelegate {
           children: [
             Row(
               children: [
-                Icon(Icons.star_rate, color: const Color(0xffA93538), size: 18),
+                Icon(Icons.star_rate, color: const Color(0xff25935F), size: 18),
                 const SizedBox(width: 6),
                 const Text(
                   'مقياس التقييم:',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xffA93538),
+                    color: Color(0xff25935F),
                   ),
                 ),
               ],
@@ -2243,7 +2243,7 @@ class _RatingHeaderDelegate extends SliverPersistentHeaderDelegate {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: const Color(0xffA93538).withValues(alpha: 0.3),
+                      color: const Color(0xff25935F).withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
@@ -2253,7 +2253,7 @@ class _RatingHeaderDelegate extends SliverPersistentHeaderDelegate {
                         width: 20,
                         height: 20,
                         decoration: BoxDecoration(
-                          color: const Color(0xffA93538),
+                          color: const Color(0xff25935F),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Center(

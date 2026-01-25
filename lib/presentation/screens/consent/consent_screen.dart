@@ -291,7 +291,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
         backgroundColor: Colors.grey.shade50,
         appBar: AppBar(
           elevation: 0,
-          backgroundColor: const Color(0xffA93538),
+          backgroundColor: const Color(0xff25935F),
           title: const Text(
             'قبول الاستبيان',
             style: TextStyle(
@@ -319,7 +319,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
                       'عزيزي المشارك، أنا الباحث ${widget.researcherName ?? ''}',
                       style: const TextStyle(
                         fontSize: 16,
-                        color: Color(0xffA93538),
+                        color: Color(0xff25935F),
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -344,7 +344,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
                       'شاكرين ومقدرين تعاونكم معنا.',
                       style: TextStyle(
                         fontSize: 15,
-                        color: Color(0xffA93538),
+                        color: Color(0xff25935F),
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -374,13 +374,13 @@ class _ConsentScreenState extends State<ConsentScreen> {
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                   color: const Color(
-                                    0xffA93538,
+                                    0xff25935F,
                                   ).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Icon(
                                   Icons.location_on,
-                                  color: Color(0xffA93538),
+                                  color: Color(0xff25935F),
                                   size: 24,
                                 ),
                               ),
@@ -499,7 +499,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
                                   : 'تحديد الموقع الحالي',
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xffA93538),
+                              backgroundColor: const Color(0xff25935F),
                               foregroundColor: Colors.white,
                               minimumSize: const Size(double.infinity, 48),
                               shape: RoundedRectangleBorder(
@@ -604,7 +604,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
                                           }
                                         });
                                       },
-                                      activeColor: const Color(0xffA93538),
+                                      activeColor: const Color(0xff25935F),
                                     ),
                                     const Text('أقبل'),
                                   ],
@@ -621,7 +621,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
                                           _isApproved = value;
                                         });
                                       },
-                                      activeColor: const Color(0xffA93538),
+                                      activeColor: const Color(0xff25935F),
                                     ),
                                     const Text('لا أقبل'),
                                   ],
@@ -671,7 +671,7 @@ class _ConsentScreenState extends State<ConsentScreen> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _isApproved != null
-                      ? const Color(0xffA93538)
+                      ? const Color(0xff25935F)
                       : Colors.grey.shade400,
                   minimumSize: const Size(double.infinity, 56),
                   shape: RoundedRectangleBorder(

@@ -61,10 +61,10 @@ class _RatingQuestionWidgetState extends State<RatingQuestionWidget> {
             padding: const EdgeInsets.all(16),
             margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
-              color: const Color(0xffA93538).withOpacity(0.1),
+              color: const Color(0xff25935F).withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: const Color(0xffA93538).withOpacity(0.3),
+                color: const Color(0xff25935F).withOpacity(0.3),
               ),
             ),
             child: Column(
@@ -75,7 +75,7 @@ class _RatingQuestionWidgetState extends State<RatingQuestionWidget> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xffA93538),
+                    color: Color(0xff25935F),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -88,7 +88,7 @@ class _RatingQuestionWidgetState extends State<RatingQuestionWidget> {
                           width: 24,
                           height: 24,
                           decoration: BoxDecoration(
-                            color: const Color(0xffA93538),
+                            color: const Color(0xff25935F),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Center(
@@ -179,12 +179,12 @@ class _RatingQuestionWidgetState extends State<RatingQuestionWidget> {
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: isSelected 
-                              ? const Color(0xffA93538) 
+                              ? const Color(0xff25935F) 
                               : Colors.grey.shade400,
                           width: isSelected ? 3 : 2,
                         ),
                         color: isSelected 
-                            ? const Color(0xffA93538).withOpacity(0.1) 
+                            ? const Color(0xff25935F).withOpacity(0.1) 
                             : Colors.transparent,
                       ),
                       child: Center(
@@ -194,7 +194,7 @@ class _RatingQuestionWidgetState extends State<RatingQuestionWidget> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: isSelected 
-                                ? const Color(0xffA93538) 
+                                ? const Color(0xff25935F) 
                                 : Colors.transparent,
                           ),
                         ),
@@ -217,7 +217,7 @@ class _RatingQuestionWidgetState extends State<RatingQuestionWidget> {
                         style: TextStyle(
                           fontSize: 12,
                           color: selectedValue == option['value'] 
-                              ? const Color(0xffA93538) 
+                              ? const Color(0xff25935F) 
                               : Colors.grey.shade600,
                           fontWeight: selectedValue == option['value'] 
                               ? FontWeight.bold 

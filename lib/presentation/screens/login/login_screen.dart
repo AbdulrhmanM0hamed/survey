@@ -39,21 +39,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Logo
                 Container(
                   padding: const EdgeInsets.all(16),
-                  child: Image.asset(
-                    'assets/HMF.png',
-                    height: 120,
-                    fit: BoxFit.contain,
-                  ),
+                  child: Image.asset('assets/HMF.png', height: 120, fit: BoxFit.contain),
                 ),
                 const SizedBox(height: 32),
                 // Title
                 const Text(
                   'المسح الميداني ',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xffA93538),
-                  ),
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xff25935F)),
                   textAlign: TextAlign.center,
                 ),
 
@@ -75,19 +67,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     labelText: 'اسم المستخدم',
                     hintText: 'أدخل اسم المستخدم',
                     prefixIcon: const Icon(Icons.person_outline),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xffA93538),
-                        width: 2,
-                      ),
+                      borderSide: const BorderSide(color: Color(0xff25935F), width: 2),
                     ),
                     filled: true,
                     fillColor: Colors.white,
@@ -114,26 +101,17 @@ class _LoginScreenState extends State<LoginScreen> {
                         hintText: 'أدخل كلمة المرور',
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
-                          icon: Icon(
-                            viewModel.obscurePassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                          ),
+                          icon: Icon(viewModel.obscurePassword ? Icons.visibility_off : Icons.visibility),
                           onPressed: viewModel.togglePasswordVisibility,
                         ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: Colors.grey.shade300),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xffA93538),
-                            width: 2,
-                          ),
+                          borderSide: const BorderSide(color: Color(0xff25935F), width: 2),
                         ),
                         filled: true,
                         fillColor: Colors.white,
@@ -153,8 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Error Message
                 Consumer<LoginViewModel>(
                   builder: (context, viewModel, child) {
-                    if (viewModel.state == LoginState.error &&
-                        viewModel.errorMessage != null) {
+                    if (viewModel.state == LoginState.error && viewModel.errorMessage != null) {
                       return Container(
                         padding: const EdgeInsets.all(12),
                         margin: const EdgeInsets.only(bottom: 16),
@@ -165,16 +142,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         child: Row(
                           children: [
-                            Icon(
-                              Icons.error_outline,
-                              color: Colors.red.shade700,
-                            ),
+                            Icon(Icons.error_outline, color: Colors.red.shade700),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: Text(
-                                viewModel.errorMessage!,
-                                style: TextStyle(color: Colors.red.shade700),
-                              ),
+                              child: Text(viewModel.errorMessage!, style: TextStyle(color: Colors.red.shade700)),
                             ),
                           ],
                         ),
@@ -190,15 +161,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     return SizedBox(
                       height: 54,
                       child: ElevatedButton(
-                        onPressed: viewModel.state == LoginState.loading
-                            ? null
-                            : () => _handleLogin(context),
+                        onPressed: viewModel.state == LoginState.loading ? null : () => _handleLogin(context),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xffA93538),
+                          backgroundColor: const Color(0xff25935F),
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           elevation: 2,
                         ),
                         child: viewModel.state == LoginState.loading
@@ -207,18 +174,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                 height: 24,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                 ),
                               )
-                            : const Text(
-                                'تسجيل الدخول',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                            : const Text('تسجيل الدخول', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       ),
                     );
                   },
@@ -246,16 +205,10 @@ class _LoginScreenState extends State<LoginScreen> {
     FocusScope.of(context).unfocus();
 
     final viewModel = context.read<LoginViewModel>();
-    final success = await viewModel.login(
-      _usernameController.text.trim(),
-      _passwordController.text,
-    );
+    final success = await viewModel.login(_usernameController.text.trim(), _passwordController.text);
 
     if (success && mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const SurveysListScreen()),
-      );
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const SurveysListScreen()));
     }
   }
 }
